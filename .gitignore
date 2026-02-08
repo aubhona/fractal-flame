@@ -1,0 +1,52 @@
+# =========================
+# Rust / Cargo
+# =========================
+/target/
+**/target/
+
+# Cargo.lock:
+# Обычно для приложений (backend/frontend) можно коммитить Cargo.lock.
+# Для библиотек часто не коммитят.
+# В workspace-проекте решай сам. Если хочешь НЕ коммитить — раскомментируй:
+# Cargo.lock
+
+# Rustfmt / Clippy / etc
+**/*.rs.bk
+
+# =========================
+# OS / Editor
+# =========================
+.DS_Store
+Thumbs.db
+
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# =========================
+# Trunk / WASM frontend
+# =========================
+# Trunk output directory (по умолчанию dist/)
+dist/
+**/dist/
+
+# WASM bindgen artifacts (иногда появляются)
+**/*.wasm
+**/*.wasm.map
+
+# If you use npm tooling additionally (не обязательно)
+node_modules/
+
+# =========================
+# Logs / temp
+# =========================
+*.log
+
+# =========================
+# Environment / secrets
+# =========================
+.env
+.env.*
+!.env.example

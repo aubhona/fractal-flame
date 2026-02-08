@@ -1,0 +1,7 @@
+[workspace]
+resolver = "2"
+members = [
+  "crates/fractal-flame-core",
+  "crates/fractal-flame-backend",
+  "crates/fractal-flame-frontend",
+]
