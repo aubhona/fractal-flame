@@ -1,0 +1,15 @@
+pub mod base_affine_transformation;
+pub mod diamond;
+mod disc;
+mod ex;
+mod handkerchief;
+mod heart;
+mod horseshoe;
+mod hyperbolic;
+mod linear;
+mod polar;
+mod sinusoidal;
+mod spherical;
+mod spiral;
+mod swirl;
+mod symmetry;

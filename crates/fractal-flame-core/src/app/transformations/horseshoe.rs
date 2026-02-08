@@ -1,0 +1,31 @@
+use super::base_affine_transformation::BaseAffineTransformation;
+use crate::domain::transformation::Transformation;
+use crate::domain::{Color, Point};
+
+pub struct Horseshoe {
+    pub base: BaseAffineTransformation,
+}
+
+impl Horseshoe {
+    pub fn new(base: BaseAffineTransformation) -> Self {
+        Self { base }
+    }
+}
+
+impl Transformation for Horseshoe {
+    fn apply(&self, point: &Point) -> Point {
+        let p = self.base.apply(point);
+
+        let r = p.r();
+
+        Point::new((p.x - p.y) * (p.x + p.y) / r, 2.0 * p.x * p.y / r)
+    }
+
+    fn weight(&self) -> f64 {
+        self.base.weight()
+    }
+
+    fn color(&self) -> &Color {
+        self.base.color()
+    }
+}
