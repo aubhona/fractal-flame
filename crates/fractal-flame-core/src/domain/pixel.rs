@@ -10,3 +10,9 @@ pub struct PixelData {
 }
 
 pub type Pixel = RwLock<PixelData>;
+
+impl PixelData {
+    pub fn new_pixel(data: PixelData) -> Pixel {
+        RwLock::new(data)
+    }
+}

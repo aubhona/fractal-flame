@@ -5,7 +5,9 @@ pub mod point;
 pub mod rect;
 pub mod transformation;
 
-pub use color::Color;
-pub use point::Point;
-pub use rect::Rect;
-pub use transformation::Transformation;
+pub use color::*;
+pub use fractal_image::*;
+pub use pixel::*;
+pub use point::*;
+pub use rect::*;
+pub use transformation::*;
