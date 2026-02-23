@@ -1,2 +1,4 @@
 pub mod get_all_variations_command;
 pub mod get_all_variations_command_handler;
+pub mod get_variation_preview_command;
+pub mod get_variation_preview_command_handler;

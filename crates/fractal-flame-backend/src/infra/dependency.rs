@@ -22,6 +22,7 @@ use fractal_flame_core::domain::{FractalImage, Rect};
 use fractal_flame_core::infra::random;
 
 use super::config::Config;
+use super::preview_cache::PreviewCache;
 
 fn search_affine_transformation(
     config: &Config,
@@ -87,6 +88,7 @@ pub struct Dependencies {
     pub config: Config,
     pub renderer: Arc<Renderer>,
     pub transformations: Arc<Vec<Box<dyn Transformation + Send + Sync>>>,
+    pub preview_cache: Arc<PreviewCache>,
 }
 
 impl Dependencies {
@@ -114,6 +116,7 @@ impl Dependencies {
             config,
             renderer: Arc::new(renderer),
             transformations,
+            preview_cache: Arc::new(PreviewCache::new()),
         })
     }
 }

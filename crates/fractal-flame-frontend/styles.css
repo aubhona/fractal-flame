@@ -52,6 +52,31 @@ body {
     margin-top: 0.5rem;
 }
 
+.preview-controls {
+    display: flex;
+    gap: 2rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.preview-controls label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+}
+
+.preview-controls input {
+    width: 5rem;
+    padding: 0.4rem 0.6rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-size: 1rem;
+}
+
 .main {
     min-height: 60vh;
 }
@@ -120,6 +145,55 @@ body {
     border-color: var(--accent);
     background: var(--bg-card-hover);
     box-shadow: 0 0 24px var(--accent-glow);
+}
+
+.card-preview {
+    position: relative;
+    margin-bottom: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+    border-radius: 8px;
+    overflow: hidden;
+    background: var(--bg-card);
+    aspect-ratio: 1;
+    max-width: 96px;
+    max-height: 96px;
+}
+
+.shimmer {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+        90deg,
+        var(--bg-secondary) 0%,
+        var(--bg-card-hover) 50%,
+        var(--bg-secondary) 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+}
+
+.shimmer-hidden {
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+@keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+.preview-img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: opacity 0.3s ease;
+}
+
+.preview-img-loading {
+    opacity: 0;
 }
 
 .card-header {

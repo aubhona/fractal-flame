@@ -1,0 +1,121 @@
+use std::sync::Arc;
+
+use fractal_flame_core::app::image_export::fractal_image_to_png;
+use fractal_flame_core::app::renderer::Renderer;
+use fractal_flame_core::app::transformations::{
+    base_affine_transformation::BaseAffineTransformation,
+    diamond::Diamond,
+    disc::Disc,
+    ex::Ex,
+    handkerchief::Handkerchief,
+    heart::Heart,
+    horseshoe::Horseshoe,
+    hyperbolic::Hyperbolic,
+    linear::Linear,
+    polar::Polar,
+    sinusoidal::Sinusoidal,
+    spherical::Spherical,
+    spiral::Spiral,
+    swirl::Swirl,
+};
+use fractal_flame_core::domain::transformation::Transformation;
+use fractal_flame_core::domain::{FractalImage, Rect};
+
+use crate::infra::preview_cache::PreviewCache;
+
+use super::get_variation_preview_command::GetVariationPreviewCommand;
+
+fn preview_base_affines() -> Vec<BaseAffineTransformation> {
+    let color = fractal_flame_core::domain::Color {
+        r: 180,
+        g: 100,
+        b: 220,
+    };
+    vec![
+        BaseAffineTransformation::new(1.0, color, 0.4, 0.0, -0.3, 0.0, 0.4, 0.0),
+        BaseAffineTransformation::new(1.0, color, 0.35, -0.2, 0.3, 0.2, 0.35, 0.0),
+        BaseAffineTransformation::new(1.0, color, 0.3, 0.0, 0.0, 0.0, 0.3, -0.4),
+    ]
+}
+
+fn create_preview_transformations(
+    id: &str,
+) -> Result<Vec<Box<dyn Transformation + Send + Sync>>, Box<dyn std::error::Error + Send + Sync>> {
+    let bases = preview_base_affines();
+    let mut transformations = Vec::with_capacity(bases.len());
+    for base in bases {
+        let t: Box<dyn Transformation + Send + Sync> = match id {
+            "diamond" => Box::new(Diamond { base }),
+            "disc" => Box::new(Disc::new(base)),
+            "ex" => Box::new(Ex::new(base)),
+            "heart" => Box::new(Heart::new(base)),
+            "horseshoe" => Box::new(Horseshoe::new(base)),
+            "spherical" => Box::new(Spherical::new(base)),
+            "swirl" => Box::new(Swirl::new(base)),
+            "linear" => Box::new(Linear::new(base)),
+            "polar" => Box::new(Polar::new(base)),
+            "spiral" => Box::new(Spiral::new(base)),
+            "handkerchief" => Box::new(Handkerchief::new(base)),
+            "hyperbolic" => Box::new(Hyperbolic::new(base)),
+            "sinusoidal" => Box::new(Sinusoidal::new(base)),
+            _ => return Err(format!("Unknown variation id: {}", id).into()),
+        };
+        transformations.push(t);
+    }
+    Ok(transformations)
+}
+
+pub struct GetVariationPreviewCommandHandler {
+    preview_cache: Arc<PreviewCache>,
+    max_threads: usize,
+}
+
+impl GetVariationPreviewCommandHandler {
+    pub fn new(preview_cache: Arc<PreviewCache>, max_threads: usize) -> Self {
+        Self {
+            preview_cache,
+            max_threads,
+        }
+    }
+
+    pub fn handle(
+        &self,
+        command: GetVariationPreviewCommand,
+    ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
+        let cache_key = PreviewCache::key(&command.variation_id, command.symmetry, command.gamma);
+
+        if let Some(cached) = self.preview_cache.get(&cache_key) {
+            return Ok(cached);
+        }
+
+        let transformations = create_preview_transformations(&command.variation_id)?;
+
+        const PREVIEW_SIZE: usize = 128;
+        const PREVIEW_SAMPLES: usize = 80_000;
+        const PREVIEW_ITER: usize = 150;
+
+        let canvas = FractalImage::new(PREVIEW_SIZE, PREVIEW_SIZE);
+        let aspect = PREVIEW_SIZE as f64 / PREVIEW_SIZE as f64;
+        let world = Rect::new(-aspect, -1.0, 2.0 * aspect, 2.0);
+
+        let renderer = Renderer::new(
+            canvas,
+            world,
+            transformations,
+            PREVIEW_SAMPLES,
+            PREVIEW_ITER,
+            command.symmetry,
+            command.gamma,
+            self.max_threads,
+        );
+
+        renderer.render()?;
+        renderer.apply_gamma_correction();
+
+        let png_bytes = fractal_image_to_png(renderer.canvas.as_ref())?;
+
+        self.preview_cache.insert(cache_key, png_bytes.clone());
+
+        Ok(png_bytes)
+    }
+}
