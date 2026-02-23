@@ -4,12 +4,8 @@ use std::path::Path;
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
-    pub width: usize,
-    pub height: usize,
     pub samples: usize,
     pub iter_per_sample: usize,
-    pub symmetry: usize,
-    pub gamma: f64,
     pub transformation_min_weight: f64,
     pub transformation_max_weight: f64,
     #[serde(default)]
@@ -19,12 +15,8 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            width: 1920,
-            height: 1080,
             samples: 100_000,
             iter_per_sample: 100,
-            symmetry: 4,
-            gamma: 2.2,
             transformation_min_weight: 0.1,
             transformation_max_weight: 1.0,
             max_threads: std::thread::available_parallelism()

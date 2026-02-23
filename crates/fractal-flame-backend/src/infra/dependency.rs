@@ -86,7 +86,6 @@ fn initialize_transformations(
 #[derive(Clone)]
 pub struct Dependencies {
     pub config: Config,
-    pub renderer: Arc<Renderer>,
     pub transformations: Arc<Vec<Box<dyn Transformation + Send + Sync>>>,
     pub preview_cache: Arc<PreviewCache>,
 }
@@ -94,28 +93,9 @@ pub struct Dependencies {
 impl Dependencies {
     pub fn new(config: Config) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let transformations = initialize_transformations(&config)?;
-
-        let canvas = FractalImage::new(config.width, config.height);
-        let aspect = config.width as f64 / config.height as f64;
-        let world = Rect::new(-aspect, -1.0, 2.0 * aspect, 2.0);
-
-        let renderer = Renderer::new(
-            canvas,
-            world,
-            transformations,
-            config.samples,
-            config.iter_per_sample,
-            config.symmetry,
-            config.gamma,
-            config.max_threads,
-        );
-
-        let transformations = renderer.transformations.clone();
-
         Ok(Self {
             config,
-            renderer: Arc::new(renderer),
-            transformations,
+            transformations: Arc::new(transformations),
             preview_cache: Arc::new(PreviewCache::new()),
         })
     }

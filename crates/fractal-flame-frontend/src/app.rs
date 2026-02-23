@@ -1,6 +1,6 @@
 use crate::katex;
 use gloo_net::http::Request;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
@@ -18,6 +18,20 @@ struct VariationsResponse {
     variations: Vec<VariationDto>,
 }
 
+#[derive(Clone, Debug, Serialize)]
+struct StartRenderRequest {
+    variation_ids: Vec<String>,
+    symmetry: usize,
+    gamma: f64,
+    width: usize,
+    height: usize,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+struct StartRenderResponse {
+    job_id: String,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct AppState {
     variations: Vec<VariationDto>,
@@ -26,6 +40,9 @@ pub struct AppState {
     error: Option<String>,
     symmetry: usize,
     gamma: f64,
+    width: usize,
+    height: usize,
+    last_job_id: Option<String>,
 }
 
 impl Default for AppState {
@@ -37,6 +54,9 @@ impl Default for AppState {
             error: None,
             symmetry: 4,
             gamma: 2.2,
+            width: 1920,
+            height: 1080,
+            last_job_id: None,
         }
     }
 }
@@ -139,7 +159,88 @@ pub fn app() -> Html {
         })
     };
 
-    app_view(&*state, on_toggle, on_symmetry_change, on_gamma_change)
+    let on_width_change = {
+        let state = state.clone();
+        Callback::from(move |v: usize| {
+            let current = (*state).clone();
+            state.set(AppState {
+                width: v,
+                ..current
+            });
+        })
+    };
+
+    let on_height_change = {
+        let state = state.clone();
+        Callback::from(move |v: usize| {
+            let current = (*state).clone();
+            state.set(AppState {
+                height: v,
+                ..current
+            });
+        })
+    };
+
+    let on_start_render = {
+        let state = state.clone();
+        Callback::from(move |_| {
+            let state = state.clone();
+            let current = (*state).clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let body = StartRenderRequest {
+                    variation_ids: current.selected.clone(),
+                    symmetry: current.symmetry,
+                    gamma: current.gamma,
+                    width: current.width,
+                    height: current.height,
+                };
+                let url = format!("{}/api/render/start", API_BASE);
+                let result = match Request::post(url.as_str()).json(&body) {
+                    Ok(req) => req.send().await,
+                    Err(e) => {
+                        state.set(AppState {
+                            error: Some(format!("Request failed: {}", e)),
+                            ..(*state).clone()
+                        });
+                        return;
+                    }
+                };
+                match result {
+                    Ok(resp) if resp.ok() => {
+                        if let Ok(data) = resp.json::<StartRenderResponse>().await {
+                            state.set(AppState {
+                                error: None,
+                                last_job_id: Some(data.job_id.clone()),
+                                ..(*state).clone()
+                            });
+                        }
+                    }
+                    Ok(resp) => {
+                        state.set(AppState {
+                            error: Some(format!("HTTP {}", resp.status())),
+                            ..(*state).clone()
+                        });
+                    }
+                    Err(e) => {
+                        state.set(AppState {
+                            error: Some(format!("Request failed: {}", e)),
+                            ..(*state).clone()
+                        });
+                    }
+                }
+            });
+        })
+    };
+
+    app_view(
+        &*state,
+        on_toggle,
+        on_symmetry_change,
+        on_gamma_change,
+        on_width_change,
+        on_height_change,
+        on_start_render,
+    )
 }
 
 fn app_view(
@@ -147,6 +248,9 @@ fn app_view(
     on_toggle: Callback<String>,
     on_symmetry_change: Callback<usize>,
     on_gamma_change: Callback<f64>,
+    on_width_change: Callback<usize>,
+    on_height_change: Callback<usize>,
+    on_start_render: Callback<()>,
 ) -> Html {
     html! {
         <div class="app">
@@ -184,6 +288,40 @@ fn app_view(
                                 if let Some(input) = input {
                                     if let Ok(v) = input.value().parse::<f64>() {
                                         on_gamma_change.emit(v);
+                                    }
+                                }
+                            }}
+                        />
+                    </label>
+                    <label>
+                        {"Width: "}
+                        <input
+                            type="number"
+                            min="64"
+                            max="4096"
+                            value={state.width.to_string()}
+                            onchange={move |e: Event| {
+                                let input = e.target_dyn_into::<HtmlInputElement>();
+                                if let Some(input) = input {
+                                    if let Ok(v) = input.value().parse::<usize>() {
+                                        on_width_change.emit(v);
+                                    }
+                                }
+                            }}
+                        />
+                    </label>
+                    <label>
+                        {"Height: "}
+                        <input
+                            type="number"
+                            min="64"
+                            max="4096"
+                            value={state.height.to_string()}
+                            onchange={move |e: Event| {
+                                let input = e.target_dyn_into::<HtmlInputElement>();
+                                if let Some(input) = input {
+                                    if let Ok(v) = input.value().parse::<usize>() {
+                                        on_height_change.emit(v);
                                     }
                                 }
                             }}
@@ -227,10 +365,61 @@ fn app_view(
                                     </div>
                                 }).collect::<Html>()}
                             </div>
+                            <button
+                                class="start-render-btn"
+                                onclick={move |_| on_start_render.emit(())}
+                            >
+                                {"Start render"}
+                            </button>
+                            if let Some(ref job_id) = state.last_job_id {
+                                <JobIdDisplay job_id={job_id.clone()} />
+                            }
                         </div>
                     }
                 }
             </main>
+        </div>
+    }
+}
+
+#[derive(Clone, Properties, PartialEq)]
+struct JobIdDisplayProps {
+    job_id: String,
+}
+
+#[function_component(JobIdDisplay)]
+fn job_id_display(props: &JobIdDisplayProps) -> Html {
+    let copied = use_state(|| false);
+
+    let on_copy = {
+        let job_id = props.job_id.clone();
+        let copied = copied.clone();
+        Callback::from(move |_| {
+            let job_id = job_id.clone();
+            let copied = copied.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                if let Some(window) = web_sys::window() {
+                    let clipboard = window.navigator().clipboard();
+                    let promise = clipboard.write_text(&job_id);
+                    if wasm_bindgen_futures::JsFuture::from(promise).await.is_ok() {
+                        copied.set(true);
+                    }
+                }
+            });
+        })
+    };
+
+    html! {
+        <div class="job-id-display">
+            <span class="job-id-label">{"Picture ID: "}</span>
+            <code class="job-id-value">{&props.job_id}</code>
+            <button
+                class="copy-btn"
+                onclick={on_copy}
+                title="Copy to clipboard"
+            >
+                {if *copied { "Copied!" } else { "Copy" }}
+            </button>
         </div>
     }
 }

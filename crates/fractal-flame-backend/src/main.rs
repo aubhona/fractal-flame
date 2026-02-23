@@ -3,7 +3,7 @@ mod di;
 mod infra;
 mod views;
 
-use axum::routing::get;
+use axum::routing::{get, post};
 use axum::Router;
 use std::net::SocketAddr;
 use tower_http::cors::{Any, CorsLayer};
@@ -38,6 +38,10 @@ async fn main() {
         .route(
             "/api/variations/{id}/preview",
             get(views::get_variation_preview::get_variation_preview),
+        )
+        .route(
+            "/api/render/start",
+            post(views::start_render::start_render),
         )
         .layer(cors)
         .layer(
