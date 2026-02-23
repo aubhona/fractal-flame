@@ -1,0 +1,5 @@
+apiVersion: v2
+name: fractal-flame
+description: Fractal Flame — генерация фрактальных изображений
+version: 0.1.0
+appVersion: "0.1.0"

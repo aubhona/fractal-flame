@@ -1,0 +1,7 @@
+{
+    "samples": 100000,
+    "iter_per_sample": 100,
+    "transformation_min_weight": 0.1,
+    "transformation_max_weight": 1,
+    "max_threads": 0
+  }

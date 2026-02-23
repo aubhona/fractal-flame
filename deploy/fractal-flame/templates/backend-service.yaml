@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .Release.Name }}-backend
+  labels:
+    {{- include "fractal-flame.labels" . | nindent 4 }}
+    {{- include "fractal-flame.backend.selectorLabels" . | nindent 4 }}
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.backend.port }}
+      targetPort: {{ .Values.backend.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "fractal-flame.backend.selectorLabels" . | nindent 4 }}

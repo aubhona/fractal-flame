@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use web_sys::HtmlInputElement;
 use yew::prelude::*;
 
-const API_BASE: &str = "http://localhost:4245";
+fn api_base() -> &'static str {
+    option_env!("API_BASE").unwrap_or("http://localhost:4245")
+}
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
 pub struct VariationDto {
@@ -74,7 +76,7 @@ pub fn app() -> Html {
                 ..(*state).clone()
             });
 
-            let url = format!("{}/api/variations", API_BASE);
+            let url = format!("{}/api/variations", api_base());
             match Request::get(url.as_str()).send().await {
                 Ok(resp) => {
                     if resp.ok() {
@@ -194,7 +196,7 @@ pub fn app() -> Html {
                     width: current.width,
                     height: current.height,
                 };
-                let url = format!("{}/api/render/start", API_BASE);
+                let url = format!("{}/api/render/start", api_base());
                 let result = match Request::post(url.as_str()).json(&body) {
                     Ok(req) => req.send().await,
                     Err(e) => {
@@ -487,7 +489,7 @@ fn variation_card(
 
     let preview_url = format!(
         "{}/api/variations/{}/preview?symmetry={}&gamma={}",
-        API_BASE,
+        api_base(),
         v.id,
         symmetry,
         gamma
