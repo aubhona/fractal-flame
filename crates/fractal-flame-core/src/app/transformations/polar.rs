@@ -30,4 +30,16 @@ impl Transformation for Polar {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Polar"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "polar"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = \frac{\theta}{\pi},\quad y' = r - 1"
+    }
 }

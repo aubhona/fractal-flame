@@ -31,4 +31,16 @@ impl Transformation for Swirl {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Swirl"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "swirl"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = x\sin(r^2) - y\cos(r^2),\quad y' = x\cos(r^2) + y\sin(r^2)"
+    }
 }

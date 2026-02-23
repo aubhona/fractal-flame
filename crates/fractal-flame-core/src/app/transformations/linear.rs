@@ -24,4 +24,16 @@ impl Transformation for Linear {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Linear"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "linear"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = ax + by + c,\quad y' = dx + ey + f"
+    }
 }

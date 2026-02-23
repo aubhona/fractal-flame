@@ -41,4 +41,16 @@ impl Transformation for BaseAffineTransformation {
     fn color(&self) -> &Color {
         &self.color
     }
+
+    fn get_name(&self) -> &'static str {
+        "Base Affine"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "base_affine"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = ax + by + c,\quad y' = dx + ey + f"
+    }
 }

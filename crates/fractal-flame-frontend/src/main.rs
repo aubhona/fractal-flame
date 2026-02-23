@@ -1,3 +1,6 @@
+use fractal_flame_frontend::App;
+use yew::Renderer;
+
 fn main() {
-    println!("Hello, world!");
+    Renderer::<App>::new().render();
 }

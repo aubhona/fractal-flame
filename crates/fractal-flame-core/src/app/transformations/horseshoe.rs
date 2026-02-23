@@ -28,4 +28,16 @@ impl Transformation for Horseshoe {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Horseshoe"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "horseshoe"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = \frac{(x-y)(x+y)}{r},\quad y' = \frac{2xy}{r}"
+    }
 }

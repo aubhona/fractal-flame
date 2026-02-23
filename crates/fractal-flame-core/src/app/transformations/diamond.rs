@@ -23,4 +23,16 @@ impl Transformation for Diamond {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Diamond"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "diamond"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = \sin\theta\cos r,\quad y' = \sin r\cos\theta"
+    }
 }

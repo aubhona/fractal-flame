@@ -1,0 +1,2 @@
+pub mod get_all_variations_command;
+pub mod get_all_variations_command_handler;

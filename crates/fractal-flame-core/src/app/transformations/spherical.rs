@@ -28,4 +28,16 @@ impl Transformation for Spherical {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Spherical"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "spherical"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = \frac{x}{r^2},\quad y' = \frac{y}{r^2}"
+    }
 }

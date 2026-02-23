@@ -31,4 +31,16 @@ impl Transformation for Ex {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Ex"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "ex"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = r(\sin^3(\theta+r) + \cos^3(\theta-r)),\quad y' = r(\sin^3(\theta+r) - \cos^3(\theta-r))"
+    }
 }

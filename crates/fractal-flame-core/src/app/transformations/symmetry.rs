@@ -45,4 +45,16 @@ impl Transformation for Symmetry {
     fn color(&self) -> &Color {
         &self.color
     }
+
+    fn get_name(&self) -> &'static str {
+        "Symmetry"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "symmetry"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = x\cos\theta - y\sin\theta,\quad y' = x\sin\theta + y\cos\theta"
+    }
 }

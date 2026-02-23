@@ -30,4 +30,16 @@ impl Transformation for Disc {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Disc"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "disc"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = \frac{\theta}{\pi}\sin(\pi r),\quad y' = \frac{\theta}{\pi}\cos(\pi r)"
+    }
 }

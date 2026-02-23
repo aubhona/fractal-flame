@@ -29,4 +29,16 @@ impl Transformation for Hyperbolic {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Hyperbolic"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "hyperbolic"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = \frac{\sin\theta}{r},\quad y' = r\cos\theta"
+    }
 }

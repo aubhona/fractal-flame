@@ -29,4 +29,16 @@ impl Transformation for Heart {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Heart"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "heart"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = r\sin(\theta r),\quad y' = -r\cos(\theta r)"
+    }
 }

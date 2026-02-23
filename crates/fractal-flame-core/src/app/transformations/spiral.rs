@@ -32,4 +32,16 @@ impl Transformation for Spiral {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Spiral"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "spiral"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = \frac{\cos\theta}{r} + \sin r,\quad y' = \frac{\sin\theta}{r} - \cos r"
+    }
 }

@@ -26,4 +26,16 @@ impl Transformation for Sinusoidal {
     fn color(&self) -> &Color {
         self.base.color()
     }
+
+    fn get_name(&self) -> &'static str {
+        "Sinusoidal"
+    }
+
+    fn get_id(&self) -> &'static str {
+        "sinusoidal"
+    }
+
+    fn get_formula(&self) -> &'static str {
+        r"x' = \sin x,\quad y' = \cos y"
+    }
 }
