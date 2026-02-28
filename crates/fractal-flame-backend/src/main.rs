@@ -43,6 +43,10 @@ async fn main() {
             "/api/render/start",
             post(views::start_render::start_render),
         )
+        .route(
+            "/api/render/{job_id}/result",
+            get(views::get_render_result::get_render_result),
+        )
         .layer(cors)
         .layer(
             TraceLayer::new_for_http()

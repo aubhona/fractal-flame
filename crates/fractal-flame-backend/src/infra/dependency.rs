@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use fractal_flame_core::app::renderer::{get_random_color, Renderer};
+use fractal_flame_core::app::renderer::get_random_color;
 use fractal_flame_core::app::transformations::{
     base_affine_transformation::BaseAffineTransformation,
     diamond::Diamond,
@@ -18,11 +18,57 @@ use fractal_flame_core::app::transformations::{
     swirl::Swirl,
 };
 use fractal_flame_core::domain::transformation::Transformation;
-use fractal_flame_core::domain::{FractalImage, Rect};
 use fractal_flame_core::infra::random;
 
 use super::config::Config;
-use super::preview_cache::PreviewCache;
+use super::minio::{MinioClient, MinioConfig};
+use super::redis::RedisPool;
+
+fn clone_transformation(
+    t: &Box<dyn Transformation + Send + Sync>,
+) -> Box<dyn Transformation + Send + Sync> {
+    let any: &dyn std::any::Any = t.as_ref();
+    if let Some(d) = any.downcast_ref::<Diamond>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Disc>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Ex>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Heart>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Horseshoe>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Spherical>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Swirl>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Linear>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Polar>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Spiral>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Handkerchief>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Hyperbolic>() {
+        return Box::new(d.clone());
+    }
+    if let Some(d) = any.downcast_ref::<Sinusoidal>() {
+        return Box::new(d.clone());
+    }
+    unreachable!("Unknown transformation type")
+}
 
 fn search_affine_transformation(
     config: &Config,
@@ -87,16 +133,75 @@ fn initialize_transformations(
 pub struct Dependencies {
     pub config: Config,
     pub transformations: Arc<Vec<Box<dyn Transformation + Send + Sync>>>,
-    pub preview_cache: Arc<PreviewCache>,
+    pub redis: Option<Arc<RedisPool>>,
+    pub minio: Option<Arc<MinioClient>>,
+}
+
+/// Фильтрует трансформации по списку variation_ids и возвращает клоны.
+pub fn filter_transformations_by_ids(
+    transformations: &Arc<Vec<Box<dyn Transformation + Send + Sync>>>,
+    ids: &[String],
+) -> Result<Vec<Box<dyn Transformation + Send + Sync>>, Box<dyn std::error::Error + Send + Sync>>
+{
+    let id_set: std::collections::HashSet<_> = ids.iter().map(|s| s.as_str()).collect();
+    let mut result = Vec::new();
+    for t in transformations.iter() {
+        if id_set.contains(t.get_id()) {
+            result.push(clone_transformation(t));
+        }
+    }
+    if result.is_empty() {
+        return Err("No variations selected".into());
+    }
+    Ok(result)
 }
 
 impl Dependencies {
     pub fn new(config: Config) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let transformations = initialize_transformations(&config)?;
+
+        let redis = std::env::var("REDIS_URL")
+            .ok()
+            .filter(|s| !s.is_empty())
+            .map(|url| RedisPool::from_url(&url))
+            .transpose()
+            .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
+                Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+            })?
+            .map(Arc::new);
+
+        if redis.is_some() {
+            tracing::info!("Redis pool configured");
+        }
+
+        let minio = (|| {
+            let endpoint = std::env::var("MINIO_ENDPOINT").ok().filter(|s| !s.is_empty())?;
+            let access_key = std::env::var("MINIO_ACCESS_KEY")
+                .unwrap_or_else(|_| "minioadmin".to_string());
+            let secret_key = std::env::var("MINIO_SECRET_KEY")
+                .unwrap_or_else(|_| "minioadmin".to_string());
+            let bucket = std::env::var("MINIO_BUCKET")
+                .unwrap_or_else(|_| "fractal-flame".to_string());
+            let region = std::env::var("MINIO_REGION")
+                .unwrap_or_else(|_| "us-east-1".to_string());
+
+            let client = MinioClient::new(MinioConfig {
+                endpoint,
+                access_key,
+                secret_key,
+                bucket,
+                region,
+            })
+            .ok()?;
+            tracing::info!("MinIO connected");
+            Some(Arc::new(client))
+        })();
+
         Ok(Self {
             config,
             transformations: Arc::new(transformations),
-            preview_cache: Arc::new(PreviewCache::new()),
+            redis,
+            minio,
         })
     }
 }

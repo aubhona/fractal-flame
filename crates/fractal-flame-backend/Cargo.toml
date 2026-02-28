@@ -14,3 +14,6 @@ tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "2"
 uuid = { version = "1", features = ["v4"] }
+deadpool-redis = "0.16"
+redis = { version = "0.26", features = ["connection-manager", "tokio-comp"] }
+rust-s3 = { version = "0.37", features = ["tokio-rustls-tls"] }

@@ -2,6 +2,7 @@ use super::base_affine_transformation::BaseAffineTransformation;
 use crate::domain::transformation::Transformation;
 use crate::domain::{Color, Point};
 
+#[derive(Clone)]
 pub struct Linear {
     pub base: BaseAffineTransformation,
 }

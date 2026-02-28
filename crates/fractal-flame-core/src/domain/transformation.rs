@@ -1,6 +1,7 @@
 use crate::domain::{Color, Point};
+use std::any::Any;
 
-pub trait Transformation {
+pub trait Transformation: Any {
     fn apply(&self, point: &Point) -> Point;
     fn weight(&self) -> f64;
     fn color(&self) -> &Color;

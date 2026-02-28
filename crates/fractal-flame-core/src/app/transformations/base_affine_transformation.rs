@@ -1,5 +1,6 @@
 use crate::domain::{Color, Point, Transformation};
 
+#[derive(Clone)]
 pub struct BaseAffineTransformation {
     pub weight: f64,
     pub color: Color,

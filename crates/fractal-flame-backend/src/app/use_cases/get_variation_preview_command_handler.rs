@@ -21,7 +21,8 @@ use fractal_flame_core::app::transformations::{
 use fractal_flame_core::domain::transformation::Transformation;
 use fractal_flame_core::domain::{FractalImage, Rect};
 
-use crate::infra::preview_cache::PreviewCache;
+use crate::infra::minio::MinioClient;
+use crate::app::services::minio_key_service::MinioKeyService;
 
 use super::get_variation_preview_command::GetVariationPreviewCommand;
 
@@ -66,25 +67,26 @@ fn create_preview_transformations(
 }
 
 pub struct GetVariationPreviewCommandHandler {
-    preview_cache: Arc<PreviewCache>,
+    minio: Arc<MinioClient>,
     max_threads: usize,
 }
 
 impl GetVariationPreviewCommandHandler {
-    pub fn new(preview_cache: Arc<PreviewCache>, max_threads: usize) -> Self {
-        Self {
-            preview_cache,
-            max_threads,
-        }
+    pub fn new(minio: Arc<MinioClient>, max_threads: usize) -> Self {
+        Self { minio, max_threads }
     }
 
-    pub fn handle(
+    pub async fn handle(
         &self,
         command: GetVariationPreviewCommand,
     ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-        let cache_key = PreviewCache::key(&command.variation_id, command.symmetry, command.gamma);
+        let key = MinioKeyService::preview_key(
+            &command.variation_id,
+            command.symmetry,
+            command.gamma,
+        );
 
-        if let Some(cached) = self.preview_cache.get(&cache_key) {
+        if let Ok(cached) = self.minio.get_object(&key).await {
             return Ok(cached);
         }
 
@@ -114,7 +116,13 @@ impl GetVariationPreviewCommandHandler {
 
         let png_bytes = fractal_image_to_png(renderer.canvas.as_ref())?;
 
-        self.preview_cache.insert(cache_key, png_bytes.clone());
+        if let Err(e) = self
+            .minio
+            .put_object(&key, png_bytes.clone(), "image/png")
+            .await
+        {
+            tracing::warn!(key = %key, error = %e, "Failed to cache preview in MinIO");
+        }
 
         Ok(png_bytes)
     }

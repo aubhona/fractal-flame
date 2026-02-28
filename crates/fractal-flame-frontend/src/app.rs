@@ -1,11 +1,13 @@
 use crate::katex;
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
-use web_sys::HtmlInputElement;
+use wasm_bindgen::JsCast;
+use web_sys::{HtmlInputElement, KeyboardEvent, MouseEvent};
 use yew::prelude::*;
 
 fn api_base() -> &'static str {
-    option_env!("API_BASE").unwrap_or("http://localhost:4245")
+    // Backend по умолчанию на порту 3000; trunk (фронт) — на 8080
+    option_env!("API_BASE").unwrap_or("http://localhost:3000")
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq)]
@@ -45,6 +47,8 @@ pub struct AppState {
     width: usize,
     height: usize,
     last_job_id: Option<String>,
+    /// Data URL готовой картинки (когда поллинг получил 200)
+    last_render_image: Option<String>,
 }
 
 impl Default for AppState {
@@ -59,6 +63,7 @@ impl Default for AppState {
             width: 1920,
             height: 1080,
             last_job_id: None,
+            last_render_image: None,
         }
     }
 }
@@ -67,6 +72,53 @@ impl Default for AppState {
 pub fn app() -> Html {
     let state = use_state(AppState::default);
     let state_clone = state.clone();
+
+    // Поллинг результата рендера
+    let state_for_poll = state.clone();
+    use_effect_with(
+        state.last_job_id.clone(),
+        move |job_id_opt| {
+            let job_id = match job_id_opt {
+                Some(id) if !id.is_empty() => id.clone(),
+                _ => return,
+            };
+            let state = state_for_poll.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let poll_interval_ms = 2000;
+                loop {
+                    let url = format!("{}/api/render/{}/result", api_base(), job_id);
+                    match Request::get(&url).send().await {
+                        Ok(resp) => {
+                            if resp.status() == 200 {
+                                if let Ok(bytes) = resp.binary().await {
+                                    let arr = js_sys::Uint8Array::from(bytes.as_slice());
+                                    let array = js_sys::Array::new();
+                                    array.push(&arr.buffer());
+                                    let opts = web_sys::BlobPropertyBag::new();
+                                    opts.set_type("image/png");
+                                    if let Ok(blob) = web_sys::Blob::new_with_u8_array_sequence_and_options(
+                                        &array.into(),
+                                        &opts,
+                                    ) {
+                                        if let Ok(url_obj) = web_sys::Url::create_object_url_with_blob(&blob) {
+                                            state.set(AppState {
+                                                last_render_image: Some(url_obj),
+                                                ..(*state).clone()
+                                            });
+                                            return;
+                                        }
+                                    }
+                                }
+                            }
+                            // 202 или ошибка — продолжаем поллить
+                        }
+                        Err(_) => {}
+                    }
+                    gloo_timers::future::TimeoutFuture::new(poll_interval_ms).await;
+                }
+            });
+        },
+    );
 
     use_effect_with((), move |_| {
         let state = state_clone.clone();
@@ -213,6 +265,7 @@ pub fn app() -> Html {
                             state.set(AppState {
                                 error: None,
                                 last_job_id: Some(data.job_id.clone()),
+                                last_render_image: None,
                                 ..(*state).clone()
                             });
                         }
@@ -374,7 +427,10 @@ fn app_view(
                                 {"Start render"}
                             </button>
                             if let Some(ref job_id) = state.last_job_id {
-                                <JobIdDisplay job_id={job_id.clone()} />
+                                <JobIdDisplay
+                                    job_id={job_id.clone()}
+                                    image_url={state.last_render_image.clone()}
+                                />
                             }
                         </div>
                     }
@@ -387,13 +443,27 @@ fn app_view(
 #[derive(Clone, Properties, PartialEq)]
 struct JobIdDisplayProps {
     job_id: String,
+    image_url: Option<String>,
 }
 
 #[function_component(JobIdDisplay)]
 fn job_id_display(props: &JobIdDisplayProps) -> Html {
     let copied = use_state(|| false);
+    let fullscreen_open = use_state(|| false);
+    let overlay_ref = NodeRef::default();
 
-    let on_copy = {
+    {
+        let overlay_ref = overlay_ref.clone();
+        use_effect_with(*fullscreen_open, move |is_open| {
+            if *is_open {
+                if let Some(el) = overlay_ref.get() {
+                    let _ = el.dyn_ref::<web_sys::HtmlElement>().map(|e| e.focus());
+                }
+            }
+        });
+    }
+
+    let on_id_click = {
         let job_id = props.job_id.clone();
         let copied = copied.clone();
         Callback::from(move |_| {
@@ -405,6 +475,9 @@ fn job_id_display(props: &JobIdDisplayProps) -> Html {
                     let promise = clipboard.write_text(&job_id);
                     if wasm_bindgen_futures::JsFuture::from(promise).await.is_ok() {
                         copied.set(true);
+                        let copied_reset = copied.clone();
+                        gloo_timers::future::TimeoutFuture::new(1500).await;
+                        copied_reset.set(false);
                     }
                 }
             });
@@ -413,15 +486,94 @@ fn job_id_display(props: &JobIdDisplayProps) -> Html {
 
     html! {
         <div class="job-id-display">
-            <span class="job-id-label">{"Picture ID: "}</span>
-            <code class="job-id-value">{&props.job_id}</code>
-            <button
-                class="copy-btn"
-                onclick={on_copy}
-                title="Copy to clipboard"
-            >
-                {if *copied { "Copied!" } else { "Copy" }}
-            </button>
+            <div class="job-id-header">
+                <span class="job-id-label">{"Picture ID: "}</span>
+                <span
+                    class={if *copied { "job-id-copyable copied" } else { "job-id-copyable" }}
+                    onclick={on_id_click}
+                    title="Click to copy"
+                >
+                    <code class="job-id-value">{&props.job_id}</code>
+                    <span class="job-id-copy-icon" aria-hidden="true">
+                        {if *copied { "✓" } else { "⧉" }}
+                    </span>
+                </span>
+            </div>
+            if props.image_url.is_none() {
+                <p class="render-status">{"Rendering... (polling)"}</p>
+            } else if let Some(ref url) = props.image_url {
+                <div class="render-result-wrapper">
+                    <div class="render-result">
+                        <img
+                            src={url.clone()}
+                            alt="Render result"
+                            class="render-result-img"
+                            onclick={{
+                                let fullscreen_open = fullscreen_open.clone();
+                                Callback::from(move |_| fullscreen_open.set(true))
+                            }}
+                        />
+                    </div>
+                    <div class="render-result-actions">
+                        <button
+                            class="fullscreen-btn"
+                            onclick={{
+                                let fullscreen_open = fullscreen_open.clone();
+                                Callback::from(move |_| fullscreen_open.set(true))
+                            }}
+                            title="Fullscreen"
+                        >
+                            <span class="fullscreen-btn-icon">{"⛶"}</span>
+                            {"Fullscreen"}
+                        </button>
+                        <a
+                            href={url.clone()}
+                            download="fractal-flame.png"
+                            class="download-btn"
+                            title="Download image"
+                        >
+                            <span class="download-btn-icon">{"↓"}</span>
+                            {"Download"}
+                        </a>
+                    </div>
+                    if *fullscreen_open {
+                        <div
+                            ref={overlay_ref.clone()}
+                            class="fullscreen-overlay"
+                            tabindex="-1"
+                            onclick={{
+                                let fullscreen_open = fullscreen_open.clone();
+                                Callback::from(move |_| fullscreen_open.set(false))
+                            }}
+                            onkeydown={{
+                                let fullscreen_open = fullscreen_open.clone();
+                                Callback::from(move |e: KeyboardEvent| {
+                                    if e.key() == "Escape" {
+                                        fullscreen_open.set(false);
+                                    }
+                                })
+                            }}
+                        >
+                            <img
+                                src={url.clone()}
+                                alt="Render result"
+                                class="fullscreen-img"
+                                onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}
+                            />
+                            <button
+                                class="fullscreen-close"
+                                onclick={{
+                                    let fullscreen_open = fullscreen_open.clone();
+                                    Callback::from(move |_| fullscreen_open.set(false))
+                                }}
+                                title="Close"
+                            >
+                                {"✕"}
+                            </button>
+                        </div>
+                    }
+                </div>
+            }
         </div>
     }
 }

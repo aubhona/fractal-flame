@@ -1,4 +1,11 @@
-.PHONY: build-backend build-frontend build-all deploy helm-install helm-upgrade helm-uninstall
+.PHONY: build-backend build-frontend build-all deploy helm-install helm-upgrade helm-uninstall dev-up dev-down
+
+# Локальная разработка: поднять Redis и MinIO
+dev-up:
+	docker compose up -d
+
+dev-down:
+	docker compose down
 
 # Сборка образов
 build-backend:

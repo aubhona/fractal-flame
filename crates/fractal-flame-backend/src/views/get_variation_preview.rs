@@ -6,7 +6,6 @@ use axum::{
 use serde::Deserialize;
 
 use crate::app::use_cases::get_variation_preview_command::GetVariationPreviewCommand;
-use crate::app::use_cases::get_variation_preview_command_handler::GetVariationPreviewCommandHandler;
 use crate::di;
 use crate::infra::Dependencies;
 
@@ -31,14 +30,19 @@ pub async fn get_variation_preview(
     Path(id): Path<String>,
     Query(params): Query<PreviewQuery>,
 ) -> impl IntoResponse {
-    let handler: GetVariationPreviewCommandHandler =
-        di::get_get_variation_preview_command_handler(&deps);
+    let Some(handler) = di::get_get_variation_preview_command_handler(&deps) else {
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "MinIO not configured".to_string(),
+        )
+            .into_response();
+    };
     let command = GetVariationPreviewCommand {
         variation_id: id,
         symmetry: params.symmetry,
         gamma: params.gamma,
     };
-    match handler.handle(command) {
+    match handler.handle(command).await {
         Ok(png) => (
             AppendHeaders([(header::CONTENT_TYPE, "image/png")]),
             png,

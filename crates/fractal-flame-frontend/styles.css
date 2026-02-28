@@ -281,9 +281,15 @@ body {
 
 .job-id-display {
     display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.job-id-header {
+    display: flex;
     align-items: center;
     gap: 0.75rem;
-    margin-top: 1.5rem;
     padding: 0.75rem 1rem;
     background: var(--bg-secondary);
     border-radius: 8px;
@@ -295,27 +301,178 @@ body {
     font-size: 0.9rem;
 }
 
-.job-id-value {
+.job-id-copyable {
     flex: 1;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    overflow-x: auto;
-}
-
-.copy-btn {
-    padding: 0.4rem 0.75rem;
-    background: var(--accent-dim);
-    color: white;
-    border: none;
-    border-radius: 6px;
-    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
     cursor: pointer;
+    padding: 0.35rem 0.5rem;
+    margin: -0.35rem -0.5rem;
+    border-radius: 6px;
     transition: background 0.2s ease;
 }
 
-.copy-btn:hover {
+.job-id-copyable:hover {
+    background: var(--bg-card);
+}
+
+.job-id-copyable:hover .job-id-value {
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.job-id-copyable:hover .job-id-copy-icon,
+.job-id-copyable.copied .job-id-copy-icon {
+    opacity: 1;
+}
+
+.job-id-value {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    text-decoration: none;
+    transition: color 0.2s ease;
+}
+
+.job-id-copyable:hover .job-id-value {
+    color: var(--accent);
+}
+
+.job-id-copy-icon {
+    font-size: 0.9rem;
+    color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.render-result-wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.render-result-actions {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.fullscreen-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1.25rem;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fullscreen-btn:hover {
+    background: var(--bg-card);
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.fullscreen-btn-icon {
+    font-size: 1.1em;
+}
+
+.fullscreen-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.9);
+    cursor: zoom-out;
+    padding: 2rem;
+}
+
+.fullscreen-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    cursor: default;
+}
+
+.fullscreen-close {
+    position: absolute;
+    top: 1rem;
+    right: 1rem;
+    width: 2.5rem;
+    height: 2.5rem;
+    padding: 0;
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    font-size: 1.25rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.fullscreen-close:hover {
     background: var(--accent);
+    color: white;
+    border-color: var(--accent);
+}
+
+.download-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    align-self: flex-start;
+    padding: 0.6rem 1.25rem;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.3);
+}
+
+.download-btn:hover {
+    background: var(--accent-dim);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+}
+
+.download-btn-icon {
+    font-size: 1.1em;
+    line-height: 1;
+}
+
+.render-status {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.render-result {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1px solid var(--border);
+}
+
+.render-result-img {
+    display: block;
+    width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    cursor: zoom-in;
 }
 
 .formula-display {
