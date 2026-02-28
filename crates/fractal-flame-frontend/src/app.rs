@@ -6,7 +6,6 @@ use web_sys::{HtmlInputElement, KeyboardEvent, MouseEvent};
 use yew::prelude::*;
 
 fn api_base() -> &'static str {
-    // Backend по умолчанию на порту 3000; trunk (фронт) — на 8080
     option_env!("API_BASE").unwrap_or("http://localhost:3000")
 }
 
@@ -383,6 +382,7 @@ fn app_view(
                         />
                     </label>
                 </div>
+                <FetchByPictureId />
             </header>
 
             <main class="main">
@@ -573,6 +573,115 @@ fn job_id_display(props: &JobIdDisplayProps) -> Html {
                         </div>
                     }
                 </div>
+            }
+        </div>
+    }
+}
+
+#[function_component(FetchByPictureId)]
+fn fetch_by_picture_id() -> Html {
+    let id_input = use_state(|| String::new());
+    let loaded_job_id = use_state(|| Option::<String>::None);
+    let loading = use_state(|| false);
+    let image_url = use_state(|| Option::<String>::None);
+    let error = use_state(|| Option::<String>::None);
+
+    let on_load = {
+        let id_input = id_input.clone();
+        let loaded_job_id = loaded_job_id.clone();
+        let loading = loading.clone();
+        let image_url = image_url.clone();
+        let error = error.clone();
+        Callback::from(move |_| {
+            let id = (*id_input).trim().to_string();
+            if id.is_empty() {
+                error.set(Some("Enter Picture ID".to_string()));
+                return;
+            }
+            loading.set(true);
+            error.set(None);
+            image_url.set(None);
+            let loaded_job_id = loaded_job_id.clone();
+            let loading = loading.clone();
+            let image_url = image_url.clone();
+            let error = error.clone();
+            wasm_bindgen_futures::spawn_local(async move {
+                let url = format!("{}/api/render/{}/result", api_base(), id);
+                match Request::get(&url).send().await {
+                    Ok(resp) => {
+                        loading.set(false);
+                        if resp.status() == 200 {
+                            loaded_job_id.set(Some(id.clone()));
+                            if let Ok(bytes) = resp.binary().await {
+                                let arr = js_sys::Uint8Array::from(bytes.as_slice());
+                                let array = js_sys::Array::new();
+                                array.push(&arr.buffer());
+                                let opts = web_sys::BlobPropertyBag::new();
+                                opts.set_type("image/png");
+                                if let Ok(blob) =
+                                    web_sys::Blob::new_with_u8_array_sequence_and_options(
+                                        &array.into(),
+                                        &opts,
+                                    )
+                                {
+                                    if let Ok(url_obj) =
+                                        web_sys::Url::create_object_url_with_blob(&blob)
+                                    {
+                                        image_url.set(Some(url_obj));
+                                        error.set(None);
+                                    }
+                                }
+                            }
+                        } else if resp.status() == 202 {
+                            error.set(Some("Rendering in progress, try again later".to_string()));
+                        } else {
+                            error.set(Some(format!("HTTP {}", resp.status())));
+                        }
+                    }
+                    Err(e) => {
+                        loading.set(false);
+                        error.set(Some(format!("Request failed: {}", e)));
+                    }
+                }
+            });
+        })
+    };
+
+    let id_input_clone = id_input.clone();
+    html! {
+        <div class="fetch-by-id">
+            <div class="fetch-by-id-row">
+            <label class="fetch-by-id-label">
+                {"Open by Picture ID: "}
+                <input
+                    type="text"
+                    class="fetch-by-id-input"
+                    placeholder="Paste Picture ID..."
+                    value={(*id_input).clone()}
+                    oninput={move |e: web_sys::InputEvent| {
+                        let input = e.target_dyn_into::<HtmlInputElement>();
+                        if let Some(input) = input {
+                            id_input_clone.set(input.value());
+                        }
+                    }}
+                />
+            </label>
+            <button
+                class="fetch-by-id-btn"
+                onclick={on_load}
+                disabled={*loading}
+            >
+                {if *loading { "Loading..." } else { "Load" }}
+            </button>
+            </div>
+            if let Some(ref err) = *error {
+                <span class="fetch-by-id-error">{err}</span>
+            }
+            if let (Some(ref job_id), Some(ref url)) = (loaded_job_id.as_ref(), image_url.as_ref()) {
+                <JobIdDisplay
+                    job_id={(*job_id).clone()}
+                    image_url={Some((*url).clone())}
+                />
             }
         </div>
     }

@@ -60,6 +60,81 @@ body {
     flex-wrap: wrap;
 }
 
+.fetch-by-id {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.fetch-by-id-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.fetch-by-id > .job-id-display {
+    margin-top: 0;
+    width: 100%;
+    max-width: 1200px;
+}
+
+.fetch-by-id-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.fetch-by-id-input {
+    padding: 0.5rem 0.75rem;
+    min-width: 280px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.9rem;
+}
+
+.fetch-by-id-input::placeholder {
+    color: var(--text-muted);
+}
+
+.fetch-by-id-input:focus {
+    outline: none;
+    border-color: var(--accent);
+}
+
+.fetch-by-id-btn {
+    padding: 0.5rem 1rem;
+    background: var(--accent-dim);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.2s ease;
+}
+
+.fetch-by-id-btn:hover:not(:disabled) {
+    background: var(--accent);
+}
+
+.fetch-by-id-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.fetch-by-id-error {
+    color: #ef4444;
+    font-size: 0.9rem;
+}
+
 .preview-controls label {
     display: flex;
     align-items: center;
