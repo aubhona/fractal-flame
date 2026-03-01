@@ -34,6 +34,8 @@ async fn main() {
         .allow_headers(Any);
 
     let app = Router::new()
+        .route("/health", get(views::health::health))
+        .route("/readiness", get(views::health::readiness))
         .route("/api/variations", get(views::get_variations::get_variations))
         .route(
             "/api/variations/{id}/preview",
@@ -46,6 +48,14 @@ async fn main() {
         .route(
             "/api/render/{job_id}/result",
             get(views::get_render_result::get_render_result),
+        )
+        .route(
+            "/api/render/{job_id}/progress",
+            get(views::render_progress::render_progress),
+        )
+        .route(
+            "/api/render/{job_id}/intermediate",
+            get(views::get_intermediate_result::get_intermediate_result),
         )
         .layer(cors)
         .layer(

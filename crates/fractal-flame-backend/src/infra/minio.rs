@@ -72,8 +72,12 @@ impl MinioClient {
         Ok(response.bytes().to_vec())
     }
 
-    pub fn bucket_name(&self) -> &str {
-        &self.bucket.name
+    pub async fn ping(&self) -> Result<(), MinioError> {
+        self.bucket
+            .list("__health__".to_string(), Some("/".to_string()))
+            .await
+            .map_err(|e| MinioError::S3(e.to_string()))?;
+        Ok(())
     }
 }
 

@@ -1,6 +1,16 @@
 use serde::Deserialize;
 use std::path::Path;
 
+fn default_job_ttl_secs() -> u64 {
+    3600
+}
+fn default_progress_sync_interval_ms() -> u64 {
+    500
+}
+fn default_intermediate_image_interval_ms() -> u64 {
+    500
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
@@ -10,6 +20,12 @@ pub struct Config {
     pub transformation_max_weight: f64,
     #[serde(default)]
     pub max_threads: usize,
+    #[serde(default = "default_job_ttl_secs")]
+    pub job_ttl_secs: u64,
+    #[serde(default = "default_progress_sync_interval_ms")]
+    pub progress_sync_interval_ms: u64,
+    #[serde(default = "default_intermediate_image_interval_ms")]
+    pub intermediate_image_interval_ms: u64,
 }
 
 impl Default for Config {
@@ -22,6 +38,9 @@ impl Default for Config {
             max_threads: std::thread::available_parallelism()
                 .map(|p| p.get())
                 .unwrap_or(8),
+            job_ttl_secs: default_job_ttl_secs(),
+            progress_sync_interval_ms: default_progress_sync_interval_ms(),
+            intermediate_image_interval_ms: default_intermediate_image_interval_ms(),
         }
     }
 }

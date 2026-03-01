@@ -1,8 +1,9 @@
 use crate::katex;
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
-use web_sys::{HtmlInputElement, KeyboardEvent, MouseEvent};
+use web_sys::{EventSource, HtmlInputElement, KeyboardEvent, MessageEvent, MouseEvent};
 use yew::prelude::*;
 
 fn api_base() -> &'static str {
@@ -35,6 +36,15 @@ struct StartRenderResponse {
     job_id: String,
 }
 
+#[derive(Clone, Debug, Deserialize)]
+struct SseProgressData {
+    #[allow(dead_code)]
+    status: String,
+    progress: Option<usize>,
+    total: Option<usize>,
+    intermediate_version: Option<u64>,
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct AppState {
     variations: Vec<VariationDto>,
@@ -46,8 +56,10 @@ pub struct AppState {
     width: usize,
     height: usize,
     last_job_id: Option<String>,
-    /// Data URL of the ready image (when polling returned 200)
     last_render_image: Option<String>,
+    render_progress: Option<usize>,
+    render_total: Option<usize>,
+    intermediate_url: Option<String>,
 }
 
 impl Default for AppState {
@@ -63,6 +75,9 @@ impl Default for AppState {
             height: 1080,
             last_job_id: None,
             last_render_image: None,
+            render_progress: None,
+            render_total: None,
+            intermediate_url: None,
         }
     }
 }
@@ -72,49 +87,124 @@ pub fn app() -> Html {
     let state = use_state(AppState::default);
     let state_clone = state.clone();
 
-    let state_for_poll = state.clone();
+    let state_for_sse = state.clone();
     use_effect_with(
         state.last_job_id.clone(),
-        move |job_id_opt| {
-            let job_id = match job_id_opt {
-                Some(id) if !id.is_empty() => id.clone(),
-                _ => return,
-            };
-            let state = state_for_poll.clone();
-            wasm_bindgen_futures::spawn_local(async move {
-                let poll_interval_ms = 2000;
-                loop {
-                    let url = format!("{}/api/render/{}/result", api_base(), job_id);
-                    match Request::get(&url).send().await {
-                        Ok(resp) => {
-                            if resp.status() == 200 {
-                                if let Ok(bytes) = resp.binary().await {
-                                    let arr = js_sys::Uint8Array::from(bytes.as_slice());
-                                    let array = js_sys::Array::new();
-                                    array.push(&arr.buffer());
-                                    let opts = web_sys::BlobPropertyBag::new();
-                                    opts.set_type("image/png");
-                                    if let Ok(blob) = web_sys::Blob::new_with_u8_array_sequence_and_options(
-                                        &array.into(),
-                                        &opts,
-                                    ) {
-                                        if let Ok(url_obj) = web_sys::Url::create_object_url_with_blob(&blob) {
-                                            state.set(AppState {
-                                                last_render_image: Some(url_obj),
-                                                ..(*state).clone()
-                                            });
-                                            return;
+        move |job_id_opt: &Option<String>| {
+            let es: Option<EventSource> = (|| {
+                let job_id = job_id_opt.as_ref().filter(|id| !id.is_empty())?;
+
+                let sse_url = format!("{}/api/render/{}/progress", api_base(), job_id);
+                let es = EventSource::new(&sse_url).ok()?;
+
+                let on_progress = {
+                    let state = state_for_sse.clone();
+                    let job_id = job_id.clone();
+                    Closure::<dyn FnMut(MessageEvent)>::new(move |event: MessageEvent| {
+                        if let Some(data) = event.data().as_string() {
+                            if let Ok(info) = serde_json::from_str::<SseProgressData>(&data) {
+                                let mut next = (*state).clone();
+                                next.render_progress = info.progress;
+                                next.render_total = info.total;
+                                if let Some(v) = info.intermediate_version {
+                                    if v > 0 {
+                                        next.intermediate_url = Some(format!(
+                                            "{}/api/render/{}/intermediate?v={}",
+                                            api_base(),
+                                            job_id,
+                                            v
+                                        ));
+                                    }
+                                }
+                                state.set(next);
+                            }
+                        }
+                    })
+                };
+                es.add_event_listener_with_callback(
+                    "progress",
+                    on_progress.as_ref().unchecked_ref(),
+                )
+                .ok();
+                on_progress.forget();
+
+                let on_completed = {
+                    let state = state_for_sse.clone();
+                    let job_id = job_id.clone();
+                    let es_ref = es.clone();
+                    Closure::<dyn FnMut(MessageEvent)>::new(move |_event: MessageEvent| {
+                        es_ref.close();
+                        let state = state.clone();
+                        let job_id = job_id.clone();
+                        wasm_bindgen_futures::spawn_local(async move {
+                            let url =
+                                format!("{}/api/render/{}/result", api_base(), job_id);
+                            if let Ok(resp) = Request::get(&url).send().await {
+                                if resp.status() == 200 {
+                                    if let Ok(bytes) = resp.binary().await {
+                                        let arr =
+                                            js_sys::Uint8Array::from(bytes.as_slice());
+                                        let array = js_sys::Array::new();
+                                        array.push(&arr.buffer());
+                                        let opts = web_sys::BlobPropertyBag::new();
+                                        opts.set_type("image/png");
+                                        if let Ok(blob) =
+                                            web_sys::Blob::new_with_u8_array_sequence_and_options(
+                                                &array.into(),
+                                                &opts,
+                                            )
+                                        {
+                                            if let Ok(url_obj) =
+                                                web_sys::Url::create_object_url_with_blob(
+                                                    &blob,
+                                                )
+                                            {
+                                                let mut next = (*state).clone();
+                                                next.last_render_image = Some(url_obj);
+                                                next.render_progress = next.render_total;
+                                                state.set(next);
+                                            }
                                         }
                                     }
                                 }
                             }
-                            // 202 or error — continue polling
-                        }
-                        Err(_) => {}
-                    }
-                    gloo_timers::future::TimeoutFuture::new(poll_interval_ms).await;
+                        });
+                    })
+                };
+                es.add_event_listener_with_callback(
+                    "completed",
+                    on_completed.as_ref().unchecked_ref(),
+                )
+                .ok();
+                on_completed.forget();
+
+                let on_failed = {
+                    let state = state_for_sse.clone();
+                    let es_ref = es.clone();
+                    Closure::<dyn FnMut(MessageEvent)>::new(move |_event: MessageEvent| {
+                        es_ref.close();
+                        let mut next = (*state).clone();
+                        next.error = Some("Render failed".to_string());
+                        next.render_progress = None;
+                        next.render_total = None;
+                        state.set(next);
+                    })
+                };
+                es.add_event_listener_with_callback(
+                    "failed",
+                    on_failed.as_ref().unchecked_ref(),
+                )
+                .ok();
+                on_failed.forget();
+
+                Some(es)
+            })();
+
+            move || {
+                if let Some(es) = es {
+                    es.close();
                 }
-            });
+            }
         },
     );
 
@@ -281,6 +371,9 @@ pub fn app() -> Html {
                                 error: None,
                                 last_job_id: Some(data.job_id.clone()),
                                 last_render_image: None,
+                                render_progress: None,
+                                render_total: None,
+                                intermediate_url: None,
                                 ..(*state).clone()
                             });
                         }
@@ -460,6 +553,9 @@ fn app_view(
                                 <JobIdDisplay
                                     job_id={job_id.clone()}
                                     image_url={state.last_render_image.clone()}
+                                    render_progress={state.render_progress}
+                                    render_total={state.render_total}
+                                    intermediate_url={state.intermediate_url.clone()}
                                 />
                             }
                         </div>
@@ -474,6 +570,12 @@ fn app_view(
 struct JobIdDisplayProps {
     job_id: String,
     image_url: Option<String>,
+    #[prop_or_default]
+    render_progress: Option<usize>,
+    #[prop_or_default]
+    render_total: Option<usize>,
+    #[prop_or_default]
+    intermediate_url: Option<String>,
 }
 
 #[function_component(JobIdDisplay)]
@@ -481,6 +583,30 @@ fn job_id_display(props: &JobIdDisplayProps) -> Html {
     let copied = use_state(|| false);
     let fullscreen_open = use_state(|| false);
     let overlay_ref = NodeRef::default();
+
+    let ready_intermediate = use_state(|| Option::<String>::None);
+    {
+        let ready = ready_intermediate.clone();
+        use_effect_with(props.intermediate_url.clone(), move |url: &Option<String>| {
+            if url.is_none() {
+                ready.set(None);
+            }
+        });
+    }
+    let on_intermediate_load = {
+        let ready = ready_intermediate.clone();
+        let pending_url = props.intermediate_url.clone();
+        Callback::from(move |_| {
+            ready.set(pending_url.clone());
+        })
+    };
+
+    let is_completed = props.image_url.is_some();
+    let display_url: Option<String> = if let Some(ref final_url) = props.image_url {
+        Some(final_url.clone())
+    } else {
+        (*ready_intermediate).clone()
+    };
 
     {
         let overlay_ref = overlay_ref.clone();
@@ -514,6 +640,147 @@ fn job_id_display(props: &JobIdDisplayProps) -> Html {
         })
     };
 
+    let img_onclick = if is_completed {
+        let fs = fullscreen_open.clone();
+        Some(Callback::from(move |_: MouseEvent| fs.set(true)))
+    } else {
+        None
+    };
+
+    let progress_html = if !is_completed {
+        if let (Some(progress), Some(total)) = (props.render_progress, props.render_total) {
+            html! {
+                <div class="render-progress">
+                    <div class="progress-bar-container">
+                        <div
+                            class="progress-bar-fill"
+                            style={format!(
+                                "width: {}%",
+                                if total > 0 { (progress as f64 / total as f64 * 100.0).min(100.0) } else { 0.0 }
+                            )}
+                        />
+                    </div>
+                    <p class="render-status">
+                        {format!(
+                            "Rendering: {:.1}%  ({}/{})",
+                            if total > 0 { progress as f64 / total as f64 * 100.0 } else { 0.0 },
+                            progress,
+                            total
+                        )}
+                    </p>
+                </div>
+            }
+        } else {
+            html! { <p class="render-status">{"Starting render..."}</p> }
+        }
+    } else {
+        html! {}
+    };
+
+    let preloader_html = if !is_completed {
+        if let Some(ref iurl) = props.intermediate_url {
+            html! {
+                <img
+                    src={iurl.clone()}
+                    alt=""
+                    class="intermediate-preloader"
+                    onload={on_intermediate_load.reform(|_: web_sys::Event| ())}
+                />
+            }
+        } else {
+            html! {}
+        }
+    } else {
+        html! {}
+    };
+
+    let image_html = if let Some(ref url) = display_url {
+        html! {
+            <div class="render-result">
+                <img
+                    src={url.clone()}
+                    alt={if is_completed { "Render result" } else { "Intermediate render" }}
+                    class={if is_completed { "render-result-img" } else { "render-result-img intermediate-img" }}
+                    onclick={img_onclick}
+                />
+            </div>
+        }
+    } else {
+        html! {}
+    };
+
+    let actions_html = if let Some(ref url) = props.image_url {
+        html! { <>
+            <div class="render-result-actions">
+                <button
+                    class="fullscreen-btn"
+                    onclick={{
+                        let fullscreen_open = fullscreen_open.clone();
+                        Callback::from(move |_| fullscreen_open.set(true))
+                    }}
+                    title="Fullscreen"
+                >
+                    <span class="fullscreen-btn-icon">{"⛶"}</span>
+                    {"Fullscreen"}
+                </button>
+                <a
+                    href={url.clone()}
+                    download="fractal-flame.png"
+                    class="download-btn"
+                    title="Download image"
+                >
+                    <span class="download-btn-icon">{"↓"}</span>
+                    {"Download"}
+                </a>
+            </div>
+            if *fullscreen_open {
+                <div
+                    ref={overlay_ref.clone()}
+                    class="fullscreen-overlay"
+                    tabindex="-1"
+                    onclick={{
+                        let fullscreen_open = fullscreen_open.clone();
+                        Callback::from(move |_| fullscreen_open.set(false))
+                    }}
+                    onkeydown={{
+                        let fullscreen_open = fullscreen_open.clone();
+                        Callback::from(move |e: KeyboardEvent| {
+                            if e.key() == "Escape" {
+                                fullscreen_open.set(false);
+                            }
+                        })
+                    }}
+                >
+                    <img
+                        src={url.clone()}
+                        alt="Render result"
+                        class="fullscreen-img"
+                        onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}
+                    />
+                    <button
+                        class="fullscreen-close"
+                        onclick={{
+                            let fullscreen_open = fullscreen_open.clone();
+                            Callback::from(move |_| fullscreen_open.set(false))
+                        }}
+                        title="Close"
+                    >
+                        {"✕"}
+                    </button>
+                </div>
+            }
+        </> }
+    } else {
+        html! {}
+    };
+
+    let render_body = html! { <>
+        {progress_html}
+        {preloader_html}
+        {image_html}
+        {actions_html}
+    </> };
+
     html! {
         <div class="job-id-display">
             <div class="job-id-header">
@@ -529,81 +796,7 @@ fn job_id_display(props: &JobIdDisplayProps) -> Html {
                     </span>
                 </span>
             </div>
-            if props.image_url.is_none() {
-                <p class="render-status">{"Rendering... (polling)"}</p>
-            } else if let Some(ref url) = props.image_url {
-                <div class="render-result-wrapper">
-                    <div class="render-result">
-                        <img
-                            src={url.clone()}
-                            alt="Render result"
-                            class="render-result-img"
-                            onclick={{
-                                let fullscreen_open = fullscreen_open.clone();
-                                Callback::from(move |_| fullscreen_open.set(true))
-                            }}
-                        />
-                    </div>
-                    <div class="render-result-actions">
-                        <button
-                            class="fullscreen-btn"
-                            onclick={{
-                                let fullscreen_open = fullscreen_open.clone();
-                                Callback::from(move |_| fullscreen_open.set(true))
-                            }}
-                            title="Fullscreen"
-                        >
-                            <span class="fullscreen-btn-icon">{"⛶"}</span>
-                            {"Fullscreen"}
-                        </button>
-                        <a
-                            href={url.clone()}
-                            download="fractal-flame.png"
-                            class="download-btn"
-                            title="Download image"
-                        >
-                            <span class="download-btn-icon">{"↓"}</span>
-                            {"Download"}
-                        </a>
-                    </div>
-                    if *fullscreen_open {
-                        <div
-                            ref={overlay_ref.clone()}
-                            class="fullscreen-overlay"
-                            tabindex="-1"
-                            onclick={{
-                                let fullscreen_open = fullscreen_open.clone();
-                                Callback::from(move |_| fullscreen_open.set(false))
-                            }}
-                            onkeydown={{
-                                let fullscreen_open = fullscreen_open.clone();
-                                Callback::from(move |e: KeyboardEvent| {
-                                    if e.key() == "Escape" {
-                                        fullscreen_open.set(false);
-                                    }
-                                })
-                            }}
-                        >
-                            <img
-                                src={url.clone()}
-                                alt="Render result"
-                                class="fullscreen-img"
-                                onclick={Callback::from(|e: MouseEvent| e.stop_propagation())}
-                            />
-                            <button
-                                class="fullscreen-close"
-                                onclick={{
-                                    let fullscreen_open = fullscreen_open.clone();
-                                    Callback::from(move |_| fullscreen_open.set(false))
-                                }}
-                                title="Close"
-                            >
-                                {"✕"}
-                            </button>
-                        </div>
-                    }
-                </div>
-            }
+            {render_body}
         </div>
     }
 }

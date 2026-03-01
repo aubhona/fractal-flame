@@ -2,6 +2,7 @@ use crate::domain::transformation::Transformation;
 use crate::domain::{Color, FractalImage, Pixel, Point, Rect};
 use crate::infra::random;
 use rayon::prelude::*;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 pub struct Renderer {
@@ -13,6 +14,7 @@ pub struct Renderer {
     pub symmetry: usize,
     pub gamma: f64,
     pub max_threads: usize,
+    pub progress: Option<Arc<AtomicUsize>>,
 }
 
 impl Renderer {
@@ -35,6 +37,7 @@ impl Renderer {
             symmetry,
             gamma,
             max_threads,
+            progress: None,
         }
     }
 
@@ -81,6 +84,10 @@ impl Renderer {
                         calculate_color(pixel, color);
                     }
                 }
+            }
+
+            if let Some(ref progress) = self.progress {
+                progress.fetch_add(1, Ordering::Relaxed);
             }
         }
 

@@ -42,16 +42,6 @@ impl RedisPool {
         Ok(())
     }
 
-    pub async fn del(&self, key: &str) -> Result<(), RedisError> {
-        let mut conn = self
-            .pool
-            .get()
-            .await
-            .map_err(|e| RedisError::Pool(e.to_string()))?;
-        conn.del::<_, ()>(key).await.map_err(RedisError::Redis)?;
-        Ok(())
-    }
-
     pub async fn ping(&self) -> Result<(), RedisError> {
         let mut conn = self
             .pool

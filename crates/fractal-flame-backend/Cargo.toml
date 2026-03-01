@@ -6,7 +6,9 @@ edition = "2024"
 [dependencies]
 fractal-flame-core = { path = "../fractal-flame-core" }
 axum = "0.8"
-tokio = { version = "1.43", features = ["rt-multi-thread", "macros"] }
+tokio = { version = "1.43", features = ["rt-multi-thread", "macros", "time"] }
+tokio-stream = "0.1"
+futures = "0.3"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tower-http = { version = "0.6", features = ["cors", "trace"] }

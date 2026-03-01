@@ -8,6 +8,11 @@ impl MinioKeyService {
         format!("jobs/{}/result.png", job_id)
     }
 
+    /// Key for intermediate snapshot: `jobs/{job_id}/intermediate.png`
+    pub fn intermediate_key(job_id: &str) -> String {
+        format!("jobs/{}/intermediate.png", job_id)
+    }
+
     /// Key for variation preview: `previews/{variation_id}_{symmetry}_{gamma}.png`
     pub fn preview_key(variation_id: &str, symmetry: usize, gamma: f64) -> String {
         format!("previews/{}_{}_{:.2}.png", variation_id, symmetry, gamma)
