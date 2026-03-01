@@ -1,24 +1,48 @@
 use serde::Deserialize;
 use std::path::Path;
 
+fn default_samples() -> usize {
+    100_000
+}
+fn default_iter_per_sample() -> usize {
+    100
+}
+fn default_transformation_min_weight() -> f64 {
+    0.1
+}
+fn default_transformation_max_weight() -> f64 {
+    1.0
+}
+fn default_max_threads() -> usize {
+    std::thread::available_parallelism()
+        .map(|p| p.get())
+        .unwrap_or(8)
+}
 fn default_job_ttl_secs() -> u64 {
     3600
 }
 fn default_progress_sync_interval_ms() -> u64 {
-    500
+    100
 }
 fn default_intermediate_image_interval_ms() -> u64 {
-    500
+    100
+}
+fn default_sse_poll_interval_ms() -> u64 {
+    100
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub struct Config {
+    #[serde(default = "default_samples")]
     pub samples: usize,
+    #[serde(default = "default_iter_per_sample")]
     pub iter_per_sample: usize,
+    #[serde(default = "default_transformation_min_weight")]
     pub transformation_min_weight: f64,
+    #[serde(default = "default_transformation_max_weight")]
     pub transformation_max_weight: f64,
-    #[serde(default)]
+    #[serde(default = "default_max_threads")]
     pub max_threads: usize,
     #[serde(default = "default_job_ttl_secs")]
     pub job_ttl_secs: u64,
@@ -26,21 +50,22 @@ pub struct Config {
     pub progress_sync_interval_ms: u64,
     #[serde(default = "default_intermediate_image_interval_ms")]
     pub intermediate_image_interval_ms: u64,
+    #[serde(default = "default_sse_poll_interval_ms")]
+    pub sse_poll_interval_ms: u64,
 }
 
 impl Default for Config {
     fn default() -> Self {
         Self {
-            samples: 100_000,
-            iter_per_sample: 100,
-            transformation_min_weight: 0.1,
-            transformation_max_weight: 1.0,
-            max_threads: std::thread::available_parallelism()
-                .map(|p| p.get())
-                .unwrap_or(8),
+            samples: default_samples(),
+            iter_per_sample: default_iter_per_sample(),
+            transformation_min_weight: default_transformation_min_weight(),
+            transformation_max_weight: default_transformation_max_weight(),
+            max_threads: default_max_threads(),
             job_ttl_secs: default_job_ttl_secs(),
             progress_sync_interval_ms: default_progress_sync_interval_ms(),
             intermediate_image_interval_ms: default_intermediate_image_interval_ms(),
+            sse_poll_interval_ms: default_sse_poll_interval_ms(),
         }
     }
 }

@@ -34,8 +34,9 @@ pub async fn render_progress(
             .into_response();
     };
 
-    let (tx, rx) = mpsc::channel::<Result<Event, Infallible>>(16);
+    let (tx, rx) = mpsc::channel::<Result<Event, Infallible>>(32);
     let command = RenderProgressCommand { job_id };
+    let poll_interval = Duration::from_millis(deps.config.sse_poll_interval_ms);
 
     tokio::spawn(async move {
         loop {
@@ -65,7 +66,7 @@ pub async fn render_progress(
                 }
             }
 
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            tokio::time::sleep(poll_interval).await;
         }
     });
 

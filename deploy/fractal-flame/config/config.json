@@ -1,7 +1,11 @@
 {
-    "samples": 100000,
-    "iter_per_sample": 100,
-    "transformation_min_weight": 0.1,
-    "transformation_max_weight": 1,
-    "max_threads": 0
-  }
+  "samples": 100000,
+  "iter_per_sample": 100,
+  "transformation_min_weight": 0.1,
+  "transformation_max_weight": 1.0,
+  "max_threads": 0,
+  "job_ttl_secs": 3600,
+  "progress_sync_interval_ms": 100,
+  "intermediate_image_interval_ms": 100,
+  "sse_poll_interval_ms": 100
+}

@@ -1,5 +1,8 @@
 use crate::domain::FractalImage;
-use image::{codecs::png::PngEncoder, ColorType, ImageEncoder};
+use image::{
+    codecs::png::{CompressionType, FilterType, PngEncoder},
+    ColorType, ImageEncoder,
+};
 use std::io::Cursor;
 
 /// Converts FractalImage to PNG bytes. Expects gamma correction already applied.
@@ -30,19 +33,26 @@ pub fn fractal_image_to_png(canvas: &FractalImage) -> Result<Vec<u8>, ImageExpor
 }
 
 /// Snapshot of the canvas mid-render: reads pixels non-destructively, applies gamma on the fly.
+/// Optimised for speed: single lock-acquisition pass + fast PNG compression.
 pub fn fractal_image_to_intermediate_png(
     canvas: &FractalImage,
     gamma: f64,
 ) -> Result<Vec<u8>, ImageExportError> {
+    let total = canvas.width * canvas.height;
+
+    let mut pixel_buf: Vec<(u8, u8, u8, i32)> = Vec::with_capacity(total);
     let mut max_normal = 0.0f64;
+
     for y in 0..canvas.height {
         for x in 0..canvas.width {
             if let Some(pixel) = canvas.pixel_at(x, y) {
                 let data = pixel
                     .read()
                     .map_err(|_| ImageExportError::PixelReadFailed)?;
-                if data.hit_count > 0 {
-                    let normal = (data.hit_count as f64).log10();
+                let hc = data.hit_count;
+                pixel_buf.push((data.color.r, data.color.g, data.color.b, hc));
+                if hc > 0 {
+                    let normal = (hc as f64).log10();
                     if normal > max_normal {
                         max_normal = normal;
                     }
@@ -51,31 +61,26 @@ pub fn fractal_image_to_intermediate_png(
         }
     }
 
-    let mut raw = Vec::with_capacity(canvas.width * canvas.height * 4);
-    for y in 0..canvas.height {
-        for x in 0..canvas.width {
-            if let Some(pixel) = canvas.pixel_at(x, y) {
-                let data = pixel
-                    .read()
-                    .map_err(|_| ImageExportError::PixelReadFailed)?;
-                if data.hit_count > 0 && max_normal > 0.0 {
-                    let normal = (data.hit_count as f64).log10() / max_normal;
-                    let gamma_factor = normal.powf(1.0 / gamma);
-                    raw.push(((data.color.r as f64) * gamma_factor) as u8);
-                    raw.push(((data.color.g as f64) * gamma_factor) as u8);
-                    raw.push(((data.color.b as f64) * gamma_factor) as u8);
-                } else {
-                    raw.push(0);
-                    raw.push(0);
-                    raw.push(0);
-                }
-                raw.push(255);
-            }
+    let inv_gamma = 1.0 / gamma;
+    let mut raw = Vec::with_capacity(total * 4);
+    for &(r, g, b, hc) in &pixel_buf {
+        if hc > 0 && max_normal > 0.0 {
+            let normal = (hc as f64).log10() / max_normal;
+            let gf = normal.powf(inv_gamma);
+            raw.push(((r as f64) * gf) as u8);
+            raw.push(((g as f64) * gf) as u8);
+            raw.push(((b as f64) * gf) as u8);
+        } else {
+            raw.push(0);
+            raw.push(0);
+            raw.push(0);
         }
+        raw.push(255);
     }
 
     let mut buf = Cursor::new(Vec::new());
-    let encoder = PngEncoder::new(&mut buf);
+    let encoder =
+        PngEncoder::new_with_quality(&mut buf, CompressionType::Fast, FilterType::NoFilter);
     encoder
         .write_image(
             &raw,
