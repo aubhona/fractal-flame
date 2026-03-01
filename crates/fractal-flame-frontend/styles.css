@@ -194,6 +194,26 @@ body {
     font-size: 1.5rem;
 }
 
+.variations-actions {
+    margin-bottom: 1rem;
+}
+
+.select-all-btn {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.select-all-btn:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent-dim);
+}
+
 .variations-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));

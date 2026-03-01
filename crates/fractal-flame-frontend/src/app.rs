@@ -189,6 +189,23 @@ pub fn app() -> Html {
         })
     };
 
+    let on_select_all = {
+        let state = state.clone();
+        Callback::from(move |_| {
+            let current = (*state).clone();
+            let all_ids: Vec<String> = current.variations.iter().map(|v| v.id.clone()).collect();
+            let selected = if current.selected.len() == all_ids.len() {
+                vec![]
+            } else {
+                all_ids
+            };
+            state.set(AppState {
+                selected,
+                ..current
+            });
+        })
+    };
+
     let on_symmetry_change = {
         let state = state.clone();
         Callback::from(move |v: usize| {
@@ -288,6 +305,7 @@ pub fn app() -> Html {
     app_view(
         &*state,
         on_toggle,
+        on_select_all,
         on_symmetry_change,
         on_gamma_change,
         on_width_change,
@@ -299,6 +317,7 @@ pub fn app() -> Html {
 fn app_view(
     state: &AppState,
     on_toggle: Callback<String>,
+    on_select_all: Callback<()>,
     on_symmetry_change: Callback<usize>,
     on_gamma_change: Callback<f64>,
     on_width_change: Callback<usize>,
@@ -396,6 +415,18 @@ fn app_view(
                         <p>{err}</p>
                     </div>
                 } else {
+                    <div class="variations-actions">
+                        <button
+                            class="select-all-btn"
+                            onclick={move |_| on_select_all.emit(())}
+                        >
+                            {if !state.variations.is_empty() && state.selected.len() == state.variations.len() {
+                                "Deselect all"
+                            } else {
+                                "Select all"
+                            }}
+                        </button>
+                    </div>
                     <div class="variations-grid">
                         {state.variations.iter().map(|v| variation_card(v, &state.selected, state.symmetry, state.gamma, &on_toggle)).collect::<Html>()}
                     </div>
