@@ -1,7 +1,7 @@
 use crate::domain::FractalImage;
 use image::{
-    codecs::png::{CompressionType, FilterType, PngEncoder},
     ColorType, ImageEncoder,
+    codecs::png::{CompressionType, FilterType, PngEncoder},
 };
 use std::io::Cursor;
 
@@ -26,7 +26,12 @@ pub fn fractal_image_to_png(canvas: &FractalImage) -> Result<Vec<u8>, ImageExpor
     let mut buf = Cursor::new(Vec::new());
     let encoder = PngEncoder::new(&mut buf);
     encoder
-        .write_image(&raw, canvas.width as u32, canvas.height as u32, ColorType::Rgba8.into())
+        .write_image(
+            &raw,
+            canvas.width as u32,
+            canvas.height as u32,
+            ColorType::Rgba8.into(),
+        )
         .map_err(ImageExportError::EncodeFailed)?;
 
     Ok(buf.into_inner())

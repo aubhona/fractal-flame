@@ -2,19 +2,9 @@ use std::sync::Arc;
 
 use fractal_flame_core::app::renderer::get_random_color;
 use fractal_flame_core::app::transformations::{
-    base_affine_transformation::BaseAffineTransformation,
-    diamond::Diamond,
-    disc::Disc,
-    ex::Ex,
-    handkerchief::Handkerchief,
-    heart::Heart,
-    horseshoe::Horseshoe,
-    hyperbolic::Hyperbolic,
-    linear::Linear,
-    polar::Polar,
-    sinusoidal::Sinusoidal,
-    spherical::Spherical,
-    spiral::Spiral,
+    base_affine_transformation::BaseAffineTransformation, diamond::Diamond, disc::Disc, ex::Ex,
+    handkerchief::Handkerchief, heart::Heart, horseshoe::Horseshoe, hyperbolic::Hyperbolic,
+    linear::Linear, polar::Polar, sinusoidal::Sinusoidal, spherical::Spherical, spiral::Spiral,
     swirl::Swirl,
 };
 use fractal_flame_core::domain::transformation::Transformation;
@@ -55,8 +45,7 @@ fn search_affine_transformation(
 
 fn initialize_transformations(
     config: &Config,
-) -> Result<Vec<Box<dyn Transformation + Send + Sync>>, Box<dyn std::error::Error + Send + Sync>>
-{
+) -> Result<Vec<Box<dyn Transformation + Send + Sync>>, Box<dyn std::error::Error + Send + Sync>> {
     let mut transformations: Vec<Box<dyn Transformation + Send + Sync>> = vec![];
 
     let types: Vec<fn(BaseAffineTransformation) -> Box<dyn Transformation + Send + Sync>> = vec![
@@ -94,8 +83,7 @@ pub struct Dependencies {
 pub fn generate_transformations_for_ids(
     config: &Config,
     ids: &[String],
-) -> Result<Vec<Box<dyn Transformation + Send + Sync>>, Box<dyn std::error::Error + Send + Sync>>
-{
+) -> Result<Vec<Box<dyn Transformation + Send + Sync>>, Box<dyn std::error::Error + Send + Sync>> {
     if ids.is_empty() {
         return Err("No variations selected".into());
     }
@@ -133,7 +121,10 @@ impl Dependencies {
             .map(|url| RedisPool::from_url(&url))
             .transpose()
             .map_err(|e| -> Box<dyn std::error::Error + Send + Sync> {
-                Box::new(std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))
+                Box::new(std::io::Error::new(
+                    std::io::ErrorKind::Other,
+                    e.to_string(),
+                ))
             })?
             .map(Arc::new);
 
@@ -142,15 +133,16 @@ impl Dependencies {
         }
 
         let minio = (|| {
-            let endpoint = std::env::var("MINIO_ENDPOINT").ok().filter(|s| !s.is_empty())?;
-            let access_key = std::env::var("MINIO_ACCESS_KEY")
-                .unwrap_or_else(|_| "minioadmin".to_string());
-            let secret_key = std::env::var("MINIO_SECRET_KEY")
-                .unwrap_or_else(|_| "minioadmin".to_string());
-            let bucket = std::env::var("MINIO_BUCKET")
-                .unwrap_or_else(|_| "fractal-flame".to_string());
-            let region = std::env::var("MINIO_REGION")
-                .unwrap_or_else(|_| "us-east-1".to_string());
+            let endpoint = std::env::var("MINIO_ENDPOINT")
+                .ok()
+                .filter(|s| !s.is_empty())?;
+            let access_key =
+                std::env::var("MINIO_ACCESS_KEY").unwrap_or_else(|_| "minioadmin".to_string());
+            let secret_key =
+                std::env::var("MINIO_SECRET_KEY").unwrap_or_else(|_| "minioadmin".to_string());
+            let bucket =
+                std::env::var("MINIO_BUCKET").unwrap_or_else(|_| "fractal-flame".to_string());
+            let region = std::env::var("MINIO_REGION").unwrap_or_else(|_| "us-east-1".to_string());
 
             let client = MinioClient::new(MinioConfig {
                 endpoint,

@@ -1,4 +1,4 @@
-use axum::{extract::State, Json};
+use axum::{Json, extract::State};
 
 use crate::app::use_cases::get_all_variations_command::{
     GetAllVariationsCommand, GetAllVariationsCommandResult,

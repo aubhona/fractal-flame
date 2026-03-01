@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, Query, State},
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{AppendHeaders, IntoResponse},
 };
 use serde::Deserialize;
@@ -43,11 +43,7 @@ pub async fn get_variation_preview(
         gamma: params.gamma,
     };
     match handler.handle(command).await {
-        Ok(png) => (
-            AppendHeaders([(header::CONTENT_TYPE, "image/png")]),
-            png,
-        )
-            .into_response(),
+        Ok(png) => (AppendHeaders([(header::CONTENT_TYPE, "image/png")]), png).into_response(),
         Err(e) => (
             StatusCode::INTERNAL_SERVER_ERROR,
             format!("Failed to generate preview: {}", e),

@@ -3,26 +3,16 @@ use std::sync::Arc;
 use fractal_flame_core::app::image_export::fractal_image_to_png;
 use fractal_flame_core::app::renderer::Renderer;
 use fractal_flame_core::app::transformations::{
-    base_affine_transformation::BaseAffineTransformation,
-    diamond::Diamond,
-    disc::Disc,
-    ex::Ex,
-    handkerchief::Handkerchief,
-    heart::Heart,
-    horseshoe::Horseshoe,
-    hyperbolic::Hyperbolic,
-    linear::Linear,
-    polar::Polar,
-    sinusoidal::Sinusoidal,
-    spherical::Spherical,
-    spiral::Spiral,
+    base_affine_transformation::BaseAffineTransformation, diamond::Diamond, disc::Disc, ex::Ex,
+    handkerchief::Handkerchief, heart::Heart, horseshoe::Horseshoe, hyperbolic::Hyperbolic,
+    linear::Linear, polar::Polar, sinusoidal::Sinusoidal, spherical::Spherical, spiral::Spiral,
     swirl::Swirl,
 };
 use fractal_flame_core::domain::transformation::Transformation;
 use fractal_flame_core::domain::{FractalImage, Rect};
 
-use crate::infra::minio::MinioClient;
 use crate::app::services::minio_key_service::MinioKeyService;
+use crate::infra::minio::MinioClient;
 
 use super::get_variation_preview_command::GetVariationPreviewCommand;
 
@@ -80,11 +70,8 @@ impl GetVariationPreviewCommandHandler {
         &self,
         command: GetVariationPreviewCommand,
     ) -> Result<Vec<u8>, Box<dyn std::error::Error + Send + Sync>> {
-        let key = MinioKeyService::preview_key(
-            &command.variation_id,
-            command.symmetry,
-            command.gamma,
-        );
+        let key =
+            MinioKeyService::preview_key(&command.variation_id, command.symmetry, command.gamma);
 
         if let Ok(cached) = self.minio.get_object(&key).await {
             return Ok(cached);

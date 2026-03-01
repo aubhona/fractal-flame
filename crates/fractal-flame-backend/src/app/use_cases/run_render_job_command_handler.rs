@@ -1,8 +1,10 @@
-use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
-use fractal_flame_core::app::image_export::{fractal_image_to_intermediate_png, fractal_image_to_png};
+use fractal_flame_core::app::image_export::{
+    fractal_image_to_intermediate_png, fractal_image_to_png,
+};
 use fractal_flame_core::app::renderer::Renderer;
 use fractal_flame_core::domain::{FractalImage, Rect};
 use uuid::Uuid;
@@ -24,11 +26,7 @@ pub struct RunRenderJobCommandHandler {
 }
 
 impl RunRenderJobCommandHandler {
-    pub fn new(
-        config: Config,
-        redis: Option<Arc<RedisPool>>,
-        minio: Arc<MinioClient>,
-    ) -> Self {
+    pub fn new(config: Config, redis: Option<Arc<RedisPool>>, minio: Arc<MinioClient>) -> Self {
         Self {
             config,
             redis,
@@ -61,16 +59,15 @@ impl RunRenderJobCommandHandler {
             height,
         } = command;
 
-        let transformations =
-            match generate_transformations_for_ids(&self.config, &variation_ids) {
-                Ok(t) => t,
-                Err(e) => {
-                    tracing::error!(job_id = %job_id, error = %e, "Failed to generate transformations");
-                    self.set_redis(&RedisKeyService::job_status(&job_id), "failed")
-                        .await;
-                    return;
-                }
-            };
+        let transformations = match generate_transformations_for_ids(&self.config, &variation_ids) {
+            Ok(t) => t,
+            Err(e) => {
+                tracing::error!(job_id = %job_id, error = %e, "Failed to generate transformations");
+                self.set_redis(&RedisKeyService::job_status(&job_id), "failed")
+                    .await;
+                return;
+            }
+        };
 
         let total_samples = self.config.samples;
         self.set_redis(&RedisKeyService::job_status(&job_id), "rendering")
@@ -106,8 +103,7 @@ impl RunRenderJobCommandHandler {
         let canvas_shared = renderer.canvas.clone();
         let render_done = Arc::new(AtomicBool::new(false));
 
-        let progress_sync_interval =
-            Duration::from_millis(self.config.progress_sync_interval_ms);
+        let progress_sync_interval = Duration::from_millis(self.config.progress_sync_interval_ms);
         let intermediate_image_interval =
             Duration::from_millis(self.config.intermediate_image_interval_ms);
         let job_ttl = self.config.job_ttl_secs;
@@ -208,7 +204,11 @@ impl RunRenderJobCommandHandler {
                     tracing::error!(job_id = %job_id, error = %e, "Failed to upload result to MinIO");
                     if let Some(ref r) = redis {
                         let _ = r
-                            .set(&RedisKeyService::job_status(&job_id), "failed", Some(job_ttl))
+                            .set(
+                                &RedisKeyService::job_status(&job_id),
+                                "failed",
+                                Some(job_ttl),
+                            )
                             .await;
                     }
                     return;
@@ -223,7 +223,11 @@ impl RunRenderJobCommandHandler {
                         )
                         .await;
                     let _ = r
-                        .set(&RedisKeyService::job_status(&job_id), "completed", Some(job_ttl))
+                        .set(
+                            &RedisKeyService::job_status(&job_id),
+                            "completed",
+                            Some(job_ttl),
+                        )
                         .await;
                 }
             }
@@ -231,7 +235,11 @@ impl RunRenderJobCommandHandler {
                 tracing::error!(job_id = %job_id, error = %e, "Render job failed");
                 if let Some(ref r) = redis {
                     let _ = r
-                        .set(&RedisKeyService::job_status(&job_id), "failed", Some(job_ttl))
+                        .set(
+                            &RedisKeyService::job_status(&job_id),
+                            "failed",
+                            Some(job_ttl),
+                        )
                         .await;
                 }
             }
@@ -239,7 +247,11 @@ impl RunRenderJobCommandHandler {
                 tracing::error!(job_id = %job_id, error = %e, "Render job task panicked");
                 if let Some(ref r) = redis {
                     let _ = r
-                        .set(&RedisKeyService::job_status(&job_id), "failed", Some(job_ttl))
+                        .set(
+                            &RedisKeyService::job_status(&job_id),
+                            "failed",
+                            Some(job_ttl),
+                        )
                         .await;
                 }
             }

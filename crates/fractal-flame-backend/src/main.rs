@@ -3,13 +3,13 @@ mod di;
 mod infra;
 mod views;
 
-use axum::routing::{get, post};
 use axum::Router;
+use axum::routing::{get, post};
 use std::net::SocketAddr;
-use tower_http::cors::{Any, CorsLayer};
-use tracing::Level;
-use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tower_http::LatencyUnit;
+use tower_http::cors::{Any, CorsLayer};
+use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tracing::Level;
 
 #[tokio::main]
 async fn main() {
@@ -17,15 +17,12 @@ async fn main() {
         .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info"))
         .add_directive(tracing::Level::INFO.into());
 
-    tracing_subscriber::fmt()
-        .with_env_filter(env_filter)
-        .init();
+    tracing_subscriber::fmt().with_env_filter(env_filter).init();
 
-    let config = infra::Config::from_file(None::<&str>)
-        .unwrap_or_else(|e| {
-            tracing::warn!("Failed to load config from file ({}), using defaults", e);
-            infra::Config::default()
-        });
+    let config = infra::Config::from_file(None::<&str>).unwrap_or_else(|e| {
+        tracing::warn!("Failed to load config from file ({}), using defaults", e);
+        infra::Config::default()
+    });
     let deps = infra::Dependencies::new(config).expect("Failed to initialize dependencies");
 
     let cors = CorsLayer::new()
@@ -36,15 +33,15 @@ async fn main() {
     let app = Router::new()
         .route("/health", get(views::health::health))
         .route("/readiness", get(views::health::readiness))
-        .route("/api/variations", get(views::get_variations::get_variations))
+        .route(
+            "/api/variations",
+            get(views::get_variations::get_variations),
+        )
         .route(
             "/api/variations/{id}/preview",
             get(views::get_variation_preview::get_variation_preview),
         )
-        .route(
-            "/api/render/start",
-            post(views::start_render::start_render),
-        )
+        .route("/api/render/start", post(views::start_render::start_render))
         .route(
             "/api/render/{job_id}/result",
             get(views::get_render_result::get_render_result),
@@ -60,10 +57,7 @@ async fn main() {
         .layer(cors)
         .layer(
             TraceLayer::new_for_http()
-                .make_span_with(
-                    DefaultMakeSpan::new()
-                        .level(Level::INFO)
-                )
+                .make_span_with(DefaultMakeSpan::new().level(Level::INFO))
                 .on_request(DefaultOnRequest::new().level(Level::INFO))
                 .on_response(
                     DefaultOnResponse::new()

@@ -1,6 +1,6 @@
 use axum::{
     extract::{Path, State},
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     response::{AppendHeaders, IntoResponse},
 };
 
@@ -14,7 +14,10 @@ pub async fn get_render_result(
     Path(job_id): Path<String>,
 ) -> impl IntoResponse {
     let Some(handler) = di::get_get_render_result_command_handler(&deps) else {
-        return (StatusCode::SERVICE_UNAVAILABLE, "MinIO not configured".to_string())
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "MinIO not configured".to_string(),
+        )
             .into_response();
     };
 
@@ -30,10 +33,8 @@ pub async fn get_render_result(
             png_bytes,
         )
             .into_response(),
-        GetRenderResultOutcome::Pending => (
-            StatusCode::ACCEPTED,
-            "Rendering in progress".to_string(),
-        )
-            .into_response(),
+        GetRenderResultOutcome::Pending => {
+            (StatusCode::ACCEPTED, "Rendering in progress".to_string()).into_response()
+        }
     }
 }

@@ -77,16 +77,16 @@ impl Config {
             .or_else(|| std::env::var("CONFIG_PATH").ok().map(Into::into))
             .unwrap_or_else(|| "config.json".into());
 
-        let contents = std::fs::read_to_string(&path)
-            .map_err(|e| ConfigError::ReadFailed {
-                path: path.display().to_string(),
-                source: e,
-            })?;
-
-        let mut config: Self = serde_json::from_str(&contents).map_err(|e| ConfigError::ParseFailed {
+        let contents = std::fs::read_to_string(&path).map_err(|e| ConfigError::ReadFailed {
             path: path.display().to_string(),
             source: e,
         })?;
+
+        let mut config: Self =
+            serde_json::from_str(&contents).map_err(|e| ConfigError::ParseFailed {
+                path: path.display().to_string(),
+                source: e,
+            })?;
 
         if config.max_threads == 0 {
             config.max_threads = std::thread::available_parallelism()

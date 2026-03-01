@@ -24,7 +24,12 @@ impl RedisPool {
         conn.get(key).await.map_err(RedisError::Redis)
     }
 
-    pub async fn set(&self, key: &str, value: &str, ttl_secs: Option<u64>) -> Result<(), RedisError> {
+    pub async fn set(
+        &self,
+        key: &str,
+        value: &str,
+        ttl_secs: Option<u64>,
+    ) -> Result<(), RedisError> {
         let mut conn = self
             .pool
             .get()

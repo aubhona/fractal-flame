@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
+use axum::{Json, extract::State, http::StatusCode, response::IntoResponse};
 use serde::{Deserialize, Serialize};
 
 use crate::app::use_cases::run_render_job_command::RunRenderJobCommand;
@@ -32,7 +32,11 @@ pub async fn start_render(
     };
 
     if body.variation_ids.is_empty() {
-        return (StatusCode::BAD_REQUEST, "Select at least one variation".to_string()).into_response();
+        return (
+            StatusCode::BAD_REQUEST,
+            "Select at least one variation".to_string(),
+        )
+            .into_response();
     }
 
     let command = RunRenderJobCommand {

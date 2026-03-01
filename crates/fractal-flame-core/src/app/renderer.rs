@@ -2,8 +2,8 @@ use crate::domain::transformation::Transformation;
 use crate::domain::{Color, FractalImage, Pixel, Point, Rect};
 use crate::infra::random;
 use rayon::prelude::*;
-use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
 pub struct Renderer {
     pub canvas: Arc<FractalImage>,

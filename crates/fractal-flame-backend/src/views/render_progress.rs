@@ -5,8 +5,8 @@ use axum::{
     extract::{Path, State},
     http::StatusCode,
     response::{
-        sse::{Event, KeepAlive, Sse},
         IntoResponse,
+        sse::{Event, KeepAlive, Sse},
     },
 };
 use serde::Serialize;
@@ -30,8 +30,7 @@ pub async fn render_progress(
     Path(job_id): Path<String>,
 ) -> impl IntoResponse {
     let Some(handler) = di::get_render_progress_command_handler(&deps) else {
-        return (StatusCode::SERVICE_UNAVAILABLE, "Redis not configured")
-            .into_response();
+        return (StatusCode::SERVICE_UNAVAILABLE, "Redis not configured").into_response();
     };
 
     let (tx, rx) = mpsc::channel::<Result<Event, Infallible>>(32);
@@ -52,15 +51,23 @@ pub async fn render_progress(
 
             match info.status.as_str() {
                 "completed" => {
-                    let _ = tx.send(Ok(Event::default().event("completed").data(data))).await;
+                    let _ = tx
+                        .send(Ok(Event::default().event("completed").data(data)))
+                        .await;
                     break;
                 }
                 "failed" => {
-                    let _ = tx.send(Ok(Event::default().event("failed").data(data))).await;
+                    let _ = tx
+                        .send(Ok(Event::default().event("failed").data(data)))
+                        .await;
                     break;
                 }
                 _ => {
-                    if tx.send(Ok(Event::default().event("progress").data(data))).await.is_err() {
+                    if tx
+                        .send(Ok(Event::default().event("progress").data(data)))
+                        .await
+                        .is_err()
+                    {
                         break;
                     }
                 }

@@ -1,8 +1,8 @@
 use crate::katex;
 use gloo_net::http::Request;
 use serde::{Deserialize, Serialize};
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::closure::Closure;
 use web_sys::{EventSource, HtmlInputElement, KeyboardEvent, MessageEvent, MouseEvent};
 use yew::prelude::*;
 
@@ -137,13 +137,11 @@ pub fn app() -> Html {
                         let state = state.clone();
                         let job_id = job_id.clone();
                         wasm_bindgen_futures::spawn_local(async move {
-                            let url =
-                                format!("{}/api/render/{}/result", api_base(), job_id);
+                            let url = format!("{}/api/render/{}/result", api_base(), job_id);
                             if let Ok(resp) = Request::get(&url).send().await {
                                 if resp.status() == 200 {
                                     if let Ok(bytes) = resp.binary().await {
-                                        let arr =
-                                            js_sys::Uint8Array::from(bytes.as_slice());
+                                        let arr = js_sys::Uint8Array::from(bytes.as_slice());
                                         let array = js_sys::Array::new();
                                         array.push(&arr.buffer());
                                         let opts = web_sys::BlobPropertyBag::new();
@@ -155,9 +153,7 @@ pub fn app() -> Html {
                                             )
                                         {
                                             if let Ok(url_obj) =
-                                                web_sys::Url::create_object_url_with_blob(
-                                                    &blob,
-                                                )
+                                                web_sys::Url::create_object_url_with_blob(&blob)
                                             {
                                                 let mut next = (*state).clone();
                                                 next.last_render_image = Some(url_obj);
@@ -190,11 +186,8 @@ pub fn app() -> Html {
                         state.set(next);
                     })
                 };
-                es.add_event_listener_with_callback(
-                    "failed",
-                    on_failed.as_ref().unchecked_ref(),
-                )
-                .ok();
+                es.add_event_listener_with_callback("failed", on_failed.as_ref().unchecked_ref())
+                    .ok();
                 on_failed.forget();
 
                 Some(es)
@@ -587,11 +580,14 @@ fn job_id_display(props: &JobIdDisplayProps) -> Html {
     let ready_intermediate = use_state(|| Option::<String>::None);
     {
         let ready = ready_intermediate.clone();
-        use_effect_with(props.intermediate_url.clone(), move |url: &Option<String>| {
-            if url.is_none() {
-                ready.set(None);
-            }
-        });
+        use_effect_with(
+            props.intermediate_url.clone(),
+            move |url: &Option<String>| {
+                if url.is_none() {
+                    ready.set(None);
+                }
+            },
+        );
     }
     let on_intermediate_load = {
         let ready = ready_intermediate.clone();

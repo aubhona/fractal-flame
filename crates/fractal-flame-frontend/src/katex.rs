@@ -41,12 +41,10 @@ pub fn render_to_html(formula: &str) -> String {
     };
 
     match render.call2(&katex, &JsValue::from_str(formula), &options) {
-        Ok(result) => result
-            .as_string()
-            .unwrap_or_else(|| {
-                gloo_console::error!("KaTeX: renderToString returned non-string");
-                fallback_html(formula)
-            }),
+        Ok(result) => result.as_string().unwrap_or_else(|| {
+            gloo_console::error!("KaTeX: renderToString returned non-string");
+            fallback_html(formula)
+        }),
         Err(e) => {
             gloo_console::error!(&format!("KaTeX: renderToString error: {:?}", e));
             fallback_html(formula)

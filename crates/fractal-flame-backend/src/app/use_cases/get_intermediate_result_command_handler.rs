@@ -20,7 +20,10 @@ impl GetIntermediateResultCommandHandler {
         Self { minio }
     }
 
-    pub async fn handle(&self, command: GetIntermediateResultCommand) -> GetIntermediateResultOutcome {
+    pub async fn handle(
+        &self,
+        command: GetIntermediateResultCommand,
+    ) -> GetIntermediateResultOutcome {
         let key = MinioKeyService::intermediate_key(&command.job_id);
         match self.minio.get_object(&key).await {
             Ok(png_bytes) => GetIntermediateResultOutcome::Ready(png_bytes),
