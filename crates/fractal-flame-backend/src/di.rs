@@ -1,5 +1,6 @@
 use crate::app::use_cases::{
     get_all_variations_command_handler::GetAllVariationsCommandHandler,
+    get_render_result_command_handler::GetRenderResultCommandHandler,
     get_variation_preview_command_handler::GetVariationPreviewCommandHandler,
     run_render_job_command_handler::RunRenderJobCommandHandler,
 };
@@ -15,6 +16,13 @@ pub fn get_run_render_job_command_handler(
         deps.redis.clone(),
         minio.clone(),
     ))
+}
+
+pub fn get_get_render_result_command_handler(
+    deps: &Dependencies,
+) -> Option<GetRenderResultCommandHandler> {
+    let minio = deps.minio.as_ref()?;
+    Some(GetRenderResultCommandHandler::new(minio.clone()))
 }
 
 pub fn get_get_all_variations_command_handler(

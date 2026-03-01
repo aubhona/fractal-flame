@@ -5,9 +5,9 @@
 **/target/
 
 # Cargo.lock:
-# Обычно для приложений (backend/frontend) можно коммитить Cargo.lock.
-# Для библиотек часто не коммитят.
-# В workspace-проекте решай сам. Если хочешь НЕ коммитить — раскомментируй:
+# Usually for apps (backend/frontend) you can commit Cargo.lock.
+# For libraries it's often not committed.
+# In a workspace project, decide for yourself. To NOT commit — uncomment:
 # Cargo.lock
 
 # Rustfmt / Clippy / etc
@@ -28,15 +28,15 @@ Thumbs.db
 # =========================
 # Trunk / WASM frontend
 # =========================
-# Trunk output directory (по умолчанию dist/)
+# Trunk output directory (default dist/)
 dist/
 **/dist/
 
-# WASM bindgen artifacts (иногда появляются)
+# WASM bindgen artifacts (sometimes appear)
 **/*.wasm
 **/*.wasm.map
 
-# If you use npm tooling additionally (не обязательно)
+# If you use npm tooling additionally (optional)
 node_modules/
 
 # =========================

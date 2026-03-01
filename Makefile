@@ -1,13 +1,13 @@
 .PHONY: build-backend build-frontend build-all deploy helm-install helm-upgrade helm-uninstall dev-up dev-down
 
-# Локальная разработка: поднять Redis и MinIO
+# Local development: bring up Redis and MinIO
 dev-up:
 	docker compose up -d
 
 dev-down:
 	docker compose down
 
-# Сборка образов
+# Build images
 build-backend:
 	docker build -t fractal-flame-backend:latest -f crates/fractal-flame-backend/Dockerfile .
 
@@ -16,7 +16,7 @@ build-frontend:
 
 build-all: build-backend build-frontend
 
-# Helm: установка/обновление (release name = fractal-flame)
+# Helm: install/upgrade (release name = fractal-flame)
 deploy: build-all
 	helm upgrade --install fractal-flame ./deploy/fractal-flame
 

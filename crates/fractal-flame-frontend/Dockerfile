@@ -27,7 +27,7 @@ FROM nginx:alpine
 COPY --from=builder /app/crates/fractal-flame-frontend/dist /usr/share/nginx/html
 
 # SPA fallback: serve index.html for unknown routes
-# API routing (/api/*) — через Ingress в K8s
+# API routing (/api/*) — via Ingress in K8s
 RUN echo 'server { \
     listen 80; \
     root /usr/share/nginx/html; \

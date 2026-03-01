@@ -1,6 +1,5 @@
 use axum::{extract::State, http::StatusCode, response::IntoResponse, Json};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::app::use_cases::run_render_job_command::RunRenderJobCommand;
 use crate::di;
@@ -36,26 +35,15 @@ pub async fn start_render(
         return (StatusCode::BAD_REQUEST, "Select at least one variation".to_string()).into_response();
     }
 
-    let job_id = Uuid::new_v4().to_string();
-    let job_id_spawn = job_id.clone();
-    let variation_ids = body.variation_ids.clone();
-    let symmetry = body.symmetry;
-    let gamma = body.gamma;
-    let width = body.width;
-    let height = body.height;
+    let command = RunRenderJobCommand {
+        variation_ids: body.variation_ids.clone(),
+        symmetry: body.symmetry,
+        gamma: body.gamma,
+        width: body.width,
+        height: body.height,
+    };
 
-    tokio::spawn(async move {
-        handler
-            .handle(RunRenderJobCommand {
-                job_id: job_id_spawn,
-                variation_ids,
-                symmetry,
-                gamma,
-                width,
-                height,
-            })
-            .await
-    });
+    let job_id = handler.start(command);
 
     (StatusCode::ACCEPTED, Json(StartRenderResponse { job_id })).into_response()
 }

@@ -46,7 +46,7 @@ pub struct AppState {
     width: usize,
     height: usize,
     last_job_id: Option<String>,
-    /// Data URL готовой картинки (когда поллинг получил 200)
+    /// Data URL of the ready image (when polling returned 200)
     last_render_image: Option<String>,
 }
 
@@ -72,7 +72,6 @@ pub fn app() -> Html {
     let state = use_state(AppState::default);
     let state_clone = state.clone();
 
-    // Поллинг результата рендера
     let state_for_poll = state.clone();
     use_effect_with(
         state.last_job_id.clone(),
@@ -109,7 +108,7 @@ pub fn app() -> Html {
                                     }
                                 }
                             }
-                            // 202 или ошибка — продолжаем поллить
+                            // 202 or error — continue polling
                         }
                         Err(_) => {}
                     }

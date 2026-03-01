@@ -137,7 +137,7 @@ pub struct Dependencies {
     pub minio: Option<Arc<MinioClient>>,
 }
 
-/// Фильтрует трансформации по списку variation_ids и возвращает клоны.
+/// Filters transformations by variation_ids list and returns clones.
 pub fn filter_transformations_by_ids(
     transformations: &Arc<Vec<Box<dyn Transformation + Send + Sync>>>,
     ids: &[String],

@@ -4,26 +4,33 @@ use axum::{
     response::{AppendHeaders, IntoResponse},
 };
 
-use crate::app::services::minio_key_service::MinioKeyService;
+use crate::app::use_cases::get_render_result_command::GetRenderResultCommand;
+use crate::app::use_cases::get_render_result_command_handler::GetRenderResultOutcome;
+use crate::di;
 use crate::infra::Dependencies;
 
 pub async fn get_render_result(
     State(deps): State<Dependencies>,
     Path(job_id): Path<String>,
 ) -> impl IntoResponse {
-    let Some(ref minio) = deps.minio else {
-        return (StatusCode::SERVICE_UNAVAILABLE, "MinIO not configured".to_string()).into_response();
+    let Some(handler) = di::get_get_render_result_command_handler(&deps) else {
+        return (StatusCode::SERVICE_UNAVAILABLE, "MinIO not configured".to_string())
+            .into_response();
     };
 
-    let key = MinioKeyService::render_result_key(&job_id);
+    let outcome = handler
+        .handle(GetRenderResultCommand {
+            job_id: job_id.clone(),
+        })
+        .await;
 
-    match minio.get_object(&key).await {
-        Ok(png_bytes) => (
+    match outcome {
+        GetRenderResultOutcome::Ready(png_bytes) => (
             AppendHeaders([(header::CONTENT_TYPE, "image/png")]),
             png_bytes,
         )
             .into_response(),
-        Err(_) => (
+        GetRenderResultOutcome::Pending => (
             StatusCode::ACCEPTED,
             "Rendering in progress".to_string(),
         )

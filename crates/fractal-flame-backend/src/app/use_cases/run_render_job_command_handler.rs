@@ -3,6 +3,7 @@ use std::sync::Arc;
 use fractal_flame_core::app::image_export::fractal_image_to_png;
 use fractal_flame_core::app::renderer::Renderer;
 use fractal_flame_core::domain::{FractalImage, Rect};
+use uuid::Uuid;
 
 use crate::infra::config::Config;
 use crate::infra::dependency::filter_transformations_by_ids;
@@ -35,9 +36,25 @@ impl RunRenderJobCommandHandler {
         }
     }
 
-    pub async fn handle(&self, command: RunRenderJobCommand) {
+    /// Starts the render and returns job_id. The job runs in the background.
+    pub fn start(&self, command: RunRenderJobCommand) -> String {
+        let job_id = Uuid::new_v4().to_string();
+        let handler = self.clone();
+        let job_id_clone = job_id.clone();
+        tokio::spawn(async move {
+            handler
+                .handle_inner(job_id_clone, command)
+                .await;
+        });
+        job_id
+    }
+
+    async fn handle_inner(
+        &self,
+        job_id: String,
+        command: RunRenderJobCommand,
+    ) {
         let RunRenderJobCommand {
-            job_id,
             variation_ids,
             symmetry,
             gamma,
