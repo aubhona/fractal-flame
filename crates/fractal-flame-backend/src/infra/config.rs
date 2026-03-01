@@ -30,6 +30,15 @@ fn default_intermediate_image_interval_ms() -> u64 {
 fn default_sse_poll_interval_ms() -> u64 {
     100
 }
+fn default_preview_size() -> usize {
+    128
+}
+fn default_preview_samples() -> usize {
+    80_000
+}
+fn default_preview_iter() -> usize {
+    150
+}
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -52,6 +61,12 @@ pub struct Config {
     pub intermediate_image_interval_ms: u64,
     #[serde(default = "default_sse_poll_interval_ms")]
     pub sse_poll_interval_ms: u64,
+    #[serde(default = "default_preview_size")]
+    pub preview_size: usize,
+    #[serde(default = "default_preview_samples")]
+    pub preview_samples: usize,
+    #[serde(default = "default_preview_iter")]
+    pub preview_iter: usize,
 }
 
 impl Default for Config {
@@ -66,6 +81,9 @@ impl Default for Config {
             progress_sync_interval_ms: default_progress_sync_interval_ms(),
             intermediate_image_interval_ms: default_intermediate_image_interval_ms(),
             sse_poll_interval_ms: default_sse_poll_interval_ms(),
+            preview_size: default_preview_size(),
+            preview_samples: default_preview_samples(),
+            preview_iter: default_preview_iter(),
         }
     }
 }

@@ -52,6 +52,6 @@ pub fn get_get_variation_preview_command_handler(
     let minio = deps.minio.as_ref()?;
     Some(GetVariationPreviewCommandHandler::new(
         minio.clone(),
-        deps.config.max_threads,
+        deps.config.clone(),
     ))
 }

@@ -12,6 +12,7 @@ use fractal_flame_core::domain::transformation::Transformation;
 use fractal_flame_core::domain::{FractalImage, Rect};
 
 use crate::app::services::minio_key_service::MinioKeyService;
+use crate::infra::config::Config;
 use crate::infra::minio::MinioClient;
 
 use super::get_variation_preview_command::GetVariationPreviewCommand;
@@ -58,12 +59,12 @@ fn create_preview_transformations(
 
 pub struct GetVariationPreviewCommandHandler {
     minio: Arc<MinioClient>,
-    max_threads: usize,
+    config: Config,
 }
 
 impl GetVariationPreviewCommandHandler {
-    pub fn new(minio: Arc<MinioClient>, max_threads: usize) -> Self {
-        Self { minio, max_threads }
+    pub fn new(minio: Arc<MinioClient>, config: Config) -> Self {
+        Self { minio, config }
     }
 
     pub async fn handle(
@@ -79,23 +80,20 @@ impl GetVariationPreviewCommandHandler {
 
         let transformations = create_preview_transformations(&command.variation_id)?;
 
-        const PREVIEW_SIZE: usize = 128;
-        const PREVIEW_SAMPLES: usize = 80_000;
-        const PREVIEW_ITER: usize = 150;
-
-        let canvas = FractalImage::new(PREVIEW_SIZE, PREVIEW_SIZE);
-        let aspect = PREVIEW_SIZE as f64 / PREVIEW_SIZE as f64;
+        let size = self.config.preview_size;
+        let canvas = FractalImage::new(size, size);
+        let aspect = size as f64 / size as f64;
         let world = Rect::new(-aspect, -1.0, 2.0 * aspect, 2.0);
 
         let renderer = Renderer::new(
             canvas,
             world,
             transformations,
-            PREVIEW_SAMPLES,
-            PREVIEW_ITER,
+            self.config.preview_samples,
+            self.config.preview_iter,
             command.symmetry,
             command.gamma,
-            self.max_threads,
+            self.config.max_threads,
         );
 
         renderer.render()?;
