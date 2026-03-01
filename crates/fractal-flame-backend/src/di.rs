@@ -13,7 +13,6 @@ pub fn get_run_render_job_command_handler(
 ) -> Option<RunRenderJobCommandHandler> {
     let minio = deps.minio.as_ref()?;
     Some(RunRenderJobCommandHandler::new(
-        deps.transformations.clone(),
         deps.config.clone(),
         deps.redis.clone(),
         minio.clone(),

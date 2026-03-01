@@ -24,52 +24,6 @@ use super::config::Config;
 use super::minio::{MinioClient, MinioConfig};
 use super::redis::RedisPool;
 
-fn clone_transformation(
-    t: &Box<dyn Transformation + Send + Sync>,
-) -> Box<dyn Transformation + Send + Sync> {
-    let any: &dyn std::any::Any = t.as_ref();
-    if let Some(d) = any.downcast_ref::<Diamond>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Disc>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Ex>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Heart>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Horseshoe>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Spherical>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Swirl>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Linear>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Polar>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Spiral>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Handkerchief>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Hyperbolic>() {
-        return Box::new(d.clone());
-    }
-    if let Some(d) = any.downcast_ref::<Sinusoidal>() {
-        return Box::new(d.clone());
-    }
-    unreachable!("Unknown transformation type")
-}
-
 fn search_affine_transformation(
     config: &Config,
 ) -> Result<BaseAffineTransformation, Box<dyn std::error::Error + Send + Sync>> {
@@ -137,21 +91,34 @@ pub struct Dependencies {
     pub minio: Option<Arc<MinioClient>>,
 }
 
-/// Filters transformations by variation_ids list and returns clones.
-pub fn filter_transformations_by_ids(
-    transformations: &Arc<Vec<Box<dyn Transformation + Send + Sync>>>,
+pub fn generate_transformations_for_ids(
+    config: &Config,
     ids: &[String],
 ) -> Result<Vec<Box<dyn Transformation + Send + Sync>>, Box<dyn std::error::Error + Send + Sync>>
 {
-    let id_set: std::collections::HashSet<_> = ids.iter().map(|s| s.as_str()).collect();
-    let mut result = Vec::new();
-    for t in transformations.iter() {
-        if id_set.contains(t.get_id()) {
-            result.push(clone_transformation(t));
-        }
-    }
-    if result.is_empty() {
+    if ids.is_empty() {
         return Err("No variations selected".into());
+    }
+    let mut result = Vec::with_capacity(ids.len());
+    for id in ids {
+        let base = search_affine_transformation(config)?;
+        let t: Box<dyn Transformation + Send + Sync> = match id.as_str() {
+            "diamond" => Box::new(Diamond { base }),
+            "disc" => Box::new(Disc::new(base)),
+            "ex" => Box::new(Ex::new(base)),
+            "heart" => Box::new(Heart::new(base)),
+            "horseshoe" => Box::new(Horseshoe::new(base)),
+            "spherical" => Box::new(Spherical::new(base)),
+            "swirl" => Box::new(Swirl::new(base)),
+            "linear" => Box::new(Linear::new(base)),
+            "polar" => Box::new(Polar::new(base)),
+            "spiral" => Box::new(Spiral::new(base)),
+            "handkerchief" => Box::new(Handkerchief::new(base)),
+            "hyperbolic" => Box::new(Hyperbolic::new(base)),
+            "sinusoidal" => Box::new(Sinusoidal::new(base)),
+            other => return Err(format!("Unknown variation id: {}", other).into()),
+        };
+        result.push(t);
     }
     Ok(result)
 }

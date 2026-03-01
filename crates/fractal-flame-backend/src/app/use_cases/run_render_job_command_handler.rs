@@ -10,7 +10,7 @@ use uuid::Uuid;
 use crate::app::services::minio_key_service::MinioKeyService;
 use crate::app::services::redis_key_service::RedisKeyService;
 use crate::infra::config::Config;
-use crate::infra::dependency::filter_transformations_by_ids;
+use crate::infra::dependency::generate_transformations_for_ids;
 use crate::infra::minio::MinioClient;
 use crate::infra::redis::RedisPool;
 
@@ -18,7 +18,6 @@ use super::run_render_job_command::RunRenderJobCommand;
 
 #[derive(Clone)]
 pub struct RunRenderJobCommandHandler {
-    pub transformations: Arc<Vec<Box<dyn fractal_flame_core::domain::transformation::Transformation + Send + Sync>>>,
     pub config: Config,
     pub redis: Option<Arc<RedisPool>>,
     pub minio: Arc<MinioClient>,
@@ -26,13 +25,11 @@ pub struct RunRenderJobCommandHandler {
 
 impl RunRenderJobCommandHandler {
     pub fn new(
-        transformations: Arc<Vec<Box<dyn fractal_flame_core::domain::transformation::Transformation + Send + Sync>>>,
         config: Config,
         redis: Option<Arc<RedisPool>>,
         minio: Arc<MinioClient>,
     ) -> Self {
         Self {
-            transformations,
             config,
             redis,
             minio,
@@ -65,10 +62,10 @@ impl RunRenderJobCommandHandler {
         } = command;
 
         let transformations =
-            match filter_transformations_by_ids(&self.transformations, &variation_ids) {
+            match generate_transformations_for_ids(&self.config, &variation_ids) {
                 Ok(t) => t,
                 Err(e) => {
-                    tracing::error!(job_id = %job_id, error = %e, "Failed to filter transformations");
+                    tracing::error!(job_id = %job_id, error = %e, "Failed to generate transformations");
                     self.set_redis(&RedisKeyService::job_status(&job_id), "failed")
                         .await;
                     return;
